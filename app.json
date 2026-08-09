@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Smart IPTV Viewer",
-    "slug": "smart-iptv-viewer",
+    "name": "doggyTV",
+    "slug": "doggytv",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "doggytv",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -15,22 +15,25 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "icu.jehadurre.smart-iptv-viewer"
+      "bundleIdentifier": "icu.jehadurre.doggytv"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "icu.jehadurre.smart-iptv-viewer",
+      "package": "icu.jehadurre.doggytv",
       "softwareKeyboardLayoutMode": "pan",
-      "permissions": ["INTERNET"]
+      "permissions": [
+        "INTERNET"
+      ]
     },
     "androidTV": {
       "banner": "./assets/images/tv_banner.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true

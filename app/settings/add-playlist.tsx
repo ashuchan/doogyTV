@@ -138,7 +138,7 @@ export default function AddPlaylistScreen() {
                 marginBottom: (isTV || isLarge) ? getSpacing(24) : 16
               }
             ]}
-            placeholder="My IPTV Playlist"
+            placeholder="My doggyTV Playlist"
             placeholderTextColor={colors.textSecondary}
             value={name}
             onChangeText={setName}

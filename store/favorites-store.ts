@@ -46,7 +46,7 @@ export const useFavoritesStore = create<FavoritesState>()(
       },
     }),
     {
-      name: "iptv-favorites",
+      name: "doggytv-favorites",
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

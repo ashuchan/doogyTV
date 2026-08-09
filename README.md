@@ -1,6 +1,6 @@
-# Smart IPTV Viewer
+# doggyTV
 
-A modern, cross-platform IPTV streaming application built with React Native and Expo. This app allows users to add and manage M3U playlists, browse channels by category, mark favorites, and enjoy a seamless streaming experience on mobile devices, tablets, TVs, and web browsers.
+A modern, cross-platform streaming application built with React Native and Expo. doggyTV allows users to add and manage M3U playlists, browse channels by category, mark favorites, and enjoy a seamless streaming experience on mobile devices, tablets, TVs, and web browsers.
 
 ## Screenshots
 
@@ -57,71 +57,94 @@ The app features a fully responsive design that adapts to different screen sizes
 - **Flexible Grids**: Dynamic column counts based on available space
 - **Orientation Support**: Automatically adjusts layout for portrait and landscape modes
 
-## Installation
+## Local Onboarding & Installation
 
 ### Prerequisites
 
-- Node.js (v14 or later)
-- npm or yarn
-- Expo CLI
+- **Node.js**: v18.0 or later (v20+ recommended)
+- **Package Manager**: `npm` (v9+) or `yarn` / `pnpm` / `bun`
+- **Expo CLI**: Included locally via `npx expo`
 
-### Setup
+### Environment Verification
 
-1. Clone the repository:
+Verify your local environment setup before starting:
+```bash
+npm run check-env
+```
+
+### Setup & Local Execution
+
+1. **Clone the repository**:
    ```bash
    git clone https://github.com/JehadurRE/smart-iptv-viewer.git
    cd smart-iptv-viewer
    ```
 
-2. Install dependencies:
+2. **Install dependencies**:
    ```bash
    npm install
-   # or
-   yarn install
    ```
 
-3. Start the development server:
+3. **Start locally**:
+
+   - **Web Browser (Fastest way to test locally)**:
+     ```bash
+     npm run web
+     ```
+     Launches local dev server at `http://localhost:8081`.
+
+   - **Local Expo Server (Mobile & TV Emulators)**:
+     ```bash
+     npm start
+     ```
+     Keyboard shortcuts in the terminal:
+     - Press `w` to launch Web browser
+     - Press `a` to launch Android Emulator
+     - Press `i` to launch iOS Simulator
+
+   - **Tunnel Mode (Optional)**:
+     If you need to connect from an external physical device across different networks:
+     ```bash
+     npm run start:tunnel
+     ```
+
+## TV Development & Testing
+
+For testing D-pad navigation on Android TV or Google TV:
+
+1. **Web-based TV layout testing (Recommended)**:
    ```bash
-   npm start
-   # or
-   yarn start
+   npm run web
    ```
+   Open `http://localhost:8081` and toggle TV preview or set aspect ratio to 16:9.
 
-4. Run on your device or emulator:
-   - Scan the QR code with the Expo Go app
-   - Press 'a' for Android emulator
-   - Press 'i' for iOS simulator
-   - Press 'w' for web browser
-
-## TV Development
-
-For testing on Android TV or Google TV:
-
-1. Build the Android APK:
+2. **Android TV Emulator**:
    ```bash
-   expo build:android -t apk
+   npm run android
    ```
+   Or select your Android TV AVD (`Android_TV_1080p_API_30`) and press `a` in the Expo terminal.
 
-2. Install on your TV device:
+3. **Build & Install Android TV APK**:
    ```bash
+   npx eas build -p android --profile preview
+   # Install via ADB to TV device
    adb connect YOUR_TV_IP
    adb install app-release.apk
    ```
 
-3. For TV emulator testing:
-   ```bash
-   # Start Android TV emulator
-   emulator -avd Android_TV_1080p_API_30
-   # Install and run
-   adb install app-release.apk
-   ```
+## Local Development Troubleshooting
 
-4. Web-based TV testing:
-   ```bash
-   # Start web version for TV layout testing
-   npm run start-web
-   # Then resize browser window to TV aspect ratio (16:9)
-   ```
+- **TypeScript Type Checking**:
+  Run `npm run typecheck` to verify code types without starting the dev server.
+- **Cache Reset**:
+  If Expo fails to start or shows stale bundle errors, start with cache cleared:
+  ```bash
+  npx expo start -c
+  ```
+- **Web CORS Issues**:
+  When testing M3U playlists on local web browsers, some external IPTV providers may block cross-origin requests. Use local sample M3U files or test on Android/iOS emulators where CORS rules do not apply.
+- **Developer Onboarding Skill**:
+  An agent onboarding skill is available in `.agents/skills/iptv-onboarding/SKILL.md`. See [`architecture.md`](.agents/skills/iptv-onboarding/references/architecture.md) for full system architecture details.
 
 ## Usage
 

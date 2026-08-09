@@ -4,6 +4,7 @@ import {
   Pressable, 
   StyleSheet, 
   ViewStyle, 
+  StyleProp,
   PressableProps,
   findNodeHandle
 } from "react-native";
@@ -11,8 +12,8 @@ import { isTVDevice, isGoogleTV } from "@/utils/tv-utils";
 
 interface TVFocusableProps extends PressableProps {
   children: React.ReactNode;
-  style?: ViewStyle;
-  focusedStyle?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
+  focusedStyle?: StyleProp<ViewStyle>;
   isDefault?: boolean;
   onFocus?: () => void;
   onBlur?: () => void;

@@ -41,7 +41,7 @@ export const useRecentlyWatchedStore = create<RecentlyWatchedState>()(
       },
     }),
     {
-      name: "iptv-recently-watched",
+      name: "doggytv-recently-watched",
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

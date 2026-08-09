@@ -15,6 +15,7 @@ import { TVFocusable } from "@/components/TVFocusable";
 import { ResponsiveLayout } from "@/components/ResponsiveLayout";
 
 export default function HomeScreen() {
+  console.log("[DOGGYTV] Rendering HomeScreen component...");
   const router = useRouter();
   const { colors } = useTheme();
   const { playlists, fetchPlaylists, loading, error } = usePlaylistStore();

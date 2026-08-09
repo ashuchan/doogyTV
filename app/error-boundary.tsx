@@ -51,7 +51,6 @@ function sendErrorToIframeParent(error: any, errorInfo?: any) {
 
 if (Platform.OS === 'web' && typeof window !== 'undefined') {
   window.addEventListener('error', (event) => {
-    event.preventDefault();
     const errorDetails = event.error ?? {
       message: event.message ?? 'Unknown error',
       filename: event.filename ?? 'Unknown file',
@@ -62,7 +61,6 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
   }, true);
 
   window.addEventListener('unhandledrejection', (event) => {
-    event.preventDefault();
     sendErrorToIframeParent(event.reason);
   }, true);
 
@@ -92,16 +90,28 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      if (Platform.OS === 'web') {
+        return (
+          <div style={{ padding: 40, fontFamily: 'sans-serif', color: '#f8fafc', backgroundColor: '#0f172a', minHeight: '100vh' }}>
+            <h1 style={{ fontSize: 28, marginBottom: 12, color: '#ef4444' }}>Something went wrong</h1>
+            <p style={{ fontSize: 16, color: '#94a3b8' }}>{this.state.error?.message || 'An unexpected error occurred.'}</p>
+            {this.state.error?.stack && (
+              <pre style={{ background: '#1e293b', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13, marginTop: 16 }}>
+                {this.state.error.stack}
+              </pre>
+            )}
+          </div>
+        );
+      }
+
       return (
         <View style={styles.container}>
           <View style={styles.content}>
             <Text style={styles.title}>Something went wrong</Text>
             <Text style={styles.subtitle}>{this.state.error?.message}</Text>
-            {Platform.OS !== 'web' && (
-              <Text style={styles.description}>
-                Please check your device logs for more details.
-              </Text>
-            )}
+            <Text style={styles.description}>
+              Please check your device logs for more details.
+            </Text>
           </View>
         </View>
       );

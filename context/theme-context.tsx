@@ -59,10 +59,6 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
 
   const colors = theme === "light" ? lightColors : darkColors;
 
-  if (!isLoaded) {
-    return null;
-  }
-
   return (
     <ThemeContext.Provider value={{ theme, colors, toggleTheme }}>
       {children}

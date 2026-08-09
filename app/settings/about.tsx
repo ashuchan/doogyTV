@@ -39,7 +39,7 @@ export default function AboutScreen() {
               fontSize: (isTV || isLarge) ? 32 : 24
             }
           ]}>
-            Smart IPTV Viewer
+            doggyTV
           </Text>
           <Text style={[
             styles.version, 
@@ -174,7 +174,7 @@ export default function AboutScreen() {
               lineHeight: (isTV || isLarge) ? 28 : 22
             }
           ]}>
-            Smart IPTV Viewer is a modern, user-friendly application for watching IPTV channels on your device. 
+            doggyTV is a modern, user-friendly application for watching IPTV channels on your device. 
             It supports standard M3U playlists and provides a seamless viewing experience.
           </Text>
         </View>
@@ -309,7 +309,7 @@ export default function AboutScreen() {
               lineHeight: (isTV || isLarge) ? 28 : 22
             }
           ]}>
-            Smart IPTV Viewer respects your privacy. We do not collect or store any personal data. 
+            doggyTV respects your privacy. We do not collect or store any personal data. 
             All your playlists and preferences are stored locally on your device.
           </Text>
         </View>

@@ -33,7 +33,9 @@ export default function PlayerScreen() {
   const { addToRecentlyWatched } = useRecentlyWatchedStore();
   
   const videoRef = useRef<Video>(null);
-  const [status, setStatus] = useState<any>({});
+  const webVideoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<any>(null);
+  const [status, setStatus] = useState<any>({ isPlaying: true });
   const [controlsVisible, setControlsVisible] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +86,99 @@ export default function PlayerScreen() {
     };
   }, [id, addToRecentlyWatched, controlsVisible]);
 
+  // HLS playback setup for Web
+  useEffect(() => {
+    if (Platform.OS !== "web" || !channel?.url) return;
+
+    const video = webVideoRef.current;
+    if (!video) return;
+
+    setLoading(true);
+    setError(null);
+
+    const playVideo = () => {
+      video.play()
+        .then(() => {
+          setStatus({ isPlaying: true });
+        })
+        .catch((err) => {
+          console.warn("Autoplay blocked:", err);
+          setStatus({ isPlaying: false });
+        });
+    };
+
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = channel.url;
+      video.addEventListener("loadedmetadata", () => {
+        setLoading(false);
+        playVideo();
+      });
+      video.addEventListener("error", () => {
+        setError("Failed to load the stream. Please try again later.");
+        setLoading(false);
+      });
+    } else {
+      try {
+        const Hls = require("hls.js");
+        if (!Hls.isSupported()) {
+          setError("HLS playback is not supported on this browser.");
+          setLoading(false);
+          return;
+        }
+
+        if (hlsRef.current) {
+          hlsRef.current.destroy();
+        }
+
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+        });
+
+        hlsRef.current = hls;
+        hls.loadSource(channel.url);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setLoading(false);
+          playVideo();
+        });
+
+        hls.on(Hls.Events.ERROR, (event: any, data: any) => {
+          console.error("HLS error:", data);
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                console.log("Fatal network error, trying to recover...");
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                console.log("Fatal media error, trying to recover...");
+                hls.recoverMediaError();
+                break;
+              default:
+                setError("Failed to load the stream. Please try again later.");
+                setLoading(false);
+                hls.destroy();
+                break;
+            }
+          }
+        });
+      } catch (err) {
+        console.error("Failed to load hls.js:", err);
+        setError("Failed to load the player modules.");
+        setLoading(false);
+      }
+    }
+
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [channel?.url]);
+
   const hideControlsWithDelay = () => {
     if (controlsTimeout.current) {
       clearTimeout(controlsTimeout.current);
@@ -120,17 +215,38 @@ export default function PlayerScreen() {
   };
 
   const togglePlayPause = async () => {
-    if (status.isPlaying) {
-      await videoRef.current?.pauseAsync();
+    if (Platform.OS === "web") {
+      const video = webVideoRef.current;
+      if (video) {
+        if (video.paused) {
+          await video.play().catch(() => {});
+          setStatus({ isPlaying: true });
+        } else {
+          video.pause();
+          setStatus({ isPlaying: false });
+        }
+      }
     } else {
-      await videoRef.current?.playAsync();
+      if (status.isPlaying) {
+        await videoRef.current?.pauseAsync();
+      } else {
+        await videoRef.current?.playAsync();
+      }
     }
     showControls();
   };
 
   const toggleMute = async () => {
-    setMuted(!muted);
-    await videoRef.current?.setIsMutedAsync(!muted);
+    const newMuted = !muted;
+    setMuted(newMuted);
+    if (Platform.OS === "web") {
+      const video = webVideoRef.current;
+      if (video) {
+        video.muted = newMuted;
+      }
+    } else {
+      await videoRef.current?.setIsMutedAsync(newMuted);
+    }
     showControls();
   };
 
@@ -146,12 +262,21 @@ export default function PlayerScreen() {
   };
 
   const handleFullscreen = async () => {
-    if (Platform.OS !== "web") {
+    if (Platform.OS === "web") {
+      const container = document.getElementById("video-container");
+      if (container) {
+        if (!document.fullscreenElement) {
+          await container.requestFullscreen().catch(() => {});
+          setIsFullscreen(true);
+        } else {
+          await document.exitFullscreen().catch(() => {});
+          setIsFullscreen(false);
+        }
+      }
+    } else {
       if (isFullscreen) {
-        // Exit fullscreen
         setIsFullscreen(false);
       } else {
-        // Enter fullscreen
         if (videoRef.current) {
           await videoRef.current.presentFullscreenPlayer();
           setIsFullscreen(true);
@@ -215,26 +340,44 @@ export default function PlayerScreen() {
 
   // For TV and large screens, use a different layout
   const videoContainerStyle = (isTV || (isLarge && isLandscape)) 
-    ? { ...styles.videoContainer, width: "100%", height: "100%" }
+    ? [styles.videoContainer, { width: "100%" as const, height: "100%" as const }]
     : styles.videoContainer;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar hidden />
       
-      <Pressable style={videoContainerStyle} onPress={showControls}>
-        <Video
-          ref={videoRef}
-          style={styles.video}
-          source={{ uri: channel.url }}
-          resizeMode={ResizeMode.CONTAIN}
-          shouldPlay
-          isLooping
-          onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-          onError={handleError}
-          isMuted={muted}
-          useNativeControls={isTV}
-        />
+      <Pressable 
+        id="video-container"
+        style={videoContainerStyle} 
+        onPress={showControls}
+      >
+        {Platform.OS === "web" ? (
+          <video
+            ref={webVideoRef}
+            style={{
+              width: "100%",
+              height: "100%",
+              backgroundColor: "#000",
+              objectFit: "contain",
+            }}
+            playsInline
+            muted={muted}
+          />
+        ) : (
+          <Video
+            ref={videoRef}
+            style={styles.video}
+            source={{ uri: channel.url }}
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay
+            isLooping
+            onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+            onError={handleError}
+            isMuted={muted}
+            useNativeControls={isTV}
+          />
+        )}
         
         {loading && (
           <View style={styles.loadingOverlay}>
@@ -262,7 +405,14 @@ export default function PlayerScreen() {
                 onPress={() => {
                   setLoading(true);
                   setError(null);
-                  videoRef.current?.loadAsync({ uri: channel.url }, {}, true);
+                  if (Platform.OS === "web") {
+                    const video = webVideoRef.current;
+                    if (video && hlsRef.current) {
+                      hlsRef.current.loadSource(channel.url);
+                    }
+                  } else {
+                    videoRef.current?.loadAsync({ uri: channel.url }, {}, true);
+                  }
                 }}
                 isDefault={true}
               >
@@ -274,7 +424,14 @@ export default function PlayerScreen() {
                 onPress={() => {
                   setLoading(true);
                   setError(null);
-                  videoRef.current?.loadAsync({ uri: channel.url }, {}, true);
+                  if (Platform.OS === "web") {
+                    const video = webVideoRef.current;
+                    if (video && hlsRef.current) {
+                      hlsRef.current.loadSource(channel.url);
+                    }
+                  } else {
+                    videoRef.current?.loadAsync({ uri: channel.url }, {}, true);
+                  }
                 }}
               >
                 <Text style={styles.retryButtonText}>Retry</Text>
