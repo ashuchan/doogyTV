@@ -25,6 +25,7 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { isTVDevice, isLargeScreen, isGoogleTV } from "@/utils/tv-utils";
 import { TVFocusable } from "@/components/TVFocusable";
+import { useTVRemoteControl } from "@/hooks/useTVRemoteControl";
 
 export default function PlayerScreen() {
   const router = useRouter();
@@ -50,6 +51,54 @@ export default function PlayerScreen() {
   
   const allChannels = playlists.flatMap(playlist => playlist.channels || []);
   const channel = allChannels.find(c => c.id === currentChannelId);
+
+  const categoryChannels = channel 
+    ? allChannels.filter(c => c.category === channel.category)
+    : [];
+  const currentIdx = categoryChannels.findIndex(c => c.id === currentChannelId);
+
+  const playPreviousChannel = () => {
+    if (categoryChannels.length === 0) return;
+    const prevIdx = (currentIdx - 1 + categoryChannels.length) % categoryChannels.length;
+    const targetChannel = categoryChannels[prevIdx];
+    setCurrentChannelId(targetChannel.id);
+    showControls();
+  };
+
+  const playNextChannel = () => {
+    if (categoryChannels.length === 0) return;
+    const nextIdx = (currentIdx + 1) % categoryChannels.length;
+    const targetChannel = categoryChannels[nextIdx];
+    setCurrentChannelId(targetChannel.id);
+    showControls();
+  };
+
+  useTVRemoteControl({
+    onUp: () => {
+      if (!guideVisible) {
+        playPreviousChannel();
+      }
+    },
+    onDown: () => {
+      if (!guideVisible) {
+        playNextChannel();
+      }
+    },
+    onLeft: () => {
+      if (!guideVisible) {
+        setGuideVisible(true);
+        showControls();
+      }
+    },
+    onBack: () => {
+      if (guideVisible) {
+        setGuideVisible(false);
+      } else {
+        router.back();
+      }
+    },
+    active: true,
+  });
   
   const isFavorite = favorites.includes(currentChannelId || "");
   const isTV = isTVDevice() || isGoogleTV();
@@ -584,7 +633,7 @@ export default function PlayerScreen() {
           <View style={styles.guideContainer}>
             <Text style={styles.guideTitle}>Channel Guide</Text>
             <FlatList
-              data={allChannels}
+              data={categoryChannels}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => {
                 const isCurrent = item.id === currentChannelId;
@@ -595,6 +644,7 @@ export default function PlayerScreen() {
                       isCurrent && { backgroundColor: "rgba(6, 182, 212, 0.15)" }
                     ]}
                     focusedStyle={{ borderColor: colors.info }}
+                    isDefault={isCurrent}
                     onPress={() => {
                       setCurrentChannelId(item.id);
                       setGuideVisible(false);
