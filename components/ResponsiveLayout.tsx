@@ -22,11 +22,14 @@ export function ResponsiveLayout({ children, style }: ResponsiveLayoutProps) {
     return () => subscription.remove();
   }, []);
   
-  // For TV devices, we want to use the full width
+  // For TV devices, we want to use the full width but shift content right to fit the collapsed vertical sidebar
   const tvStyle: ViewStyle = {
     width: "100%",
     maxWidth: "100%",
-    paddingHorizontal: 0,
+    paddingLeft: 70, // Clear the collapsed sidebar space
+    paddingRight: 10,
+    paddingTop: 10,
+    paddingBottom: 10,
   };
   
   return (
@@ -39,7 +42,7 @@ export function ResponsiveLayout({ children, style }: ResponsiveLayoutProps) {
       <View style={[
         styles.content,
         isLarge && !isTV && { maxWidth: getContentMaxWidth() },
-        isTV && tvStyle,
+        isTV && { width: "100%" },
       ]}>
         {children}
       </View>

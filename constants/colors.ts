@@ -16,18 +16,20 @@ export const lightColors = {
 };
 
 export const darkColors = {
-  primary: "#4361ee",
+  primary: "#4F46E5", // Indigo accent
   secondary: "#3f37c9",
-  background: "#121212",
-  card: "#1e1e1e",
-  text: "#f8f9fa",
-  textSecondary: "#adb5bd",
-  border: "#2d2d2d",
+  background: "#090D16", // Charcoal black gradient start
+  backgroundEnd: "#111827", // Slate blue gradient end
+  card: "#1E293B", // Solid dark slate fallback for low-end SOCs
+  cardTranslucent: "rgba(255, 255, 255, 0.03)", // Translucent panel for high-end web/devices
+  border: "rgba(255, 255, 255, 0.05)", // Glassmorphism borders
+  text: "#F3F4F6", // High-contrast grey/white
+  textSecondary: "#9CA3AF", // Dimmed metadata text
   notification: "#ff4d6d",
   error: "#f44336",
   success: "#4caf50",
   warning: "#ff9800",
-  info: "#2196f3",
+  info: "#06B6D4", // Neon Cyan highlight
   white: "#ffffff",
   black: "#000000",
 };

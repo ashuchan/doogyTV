@@ -6,7 +6,8 @@ import {
   ViewStyle, 
   StyleProp,
   PressableProps,
-  findNodeHandle
+  findNodeHandle,
+  Animated
 } from "react-native";
 import { isTVDevice, isGoogleTV } from "@/utils/tv-utils";
 
@@ -37,6 +38,7 @@ export function TVFocusable({
   ...props
 }: TVFocusableProps) {
   const [isFocused, setIsFocused] = useState(false);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
   const ref = useRef(null);
   const isTV = isTVDevice() || isGoogleTV();
   
@@ -59,11 +61,21 @@ export function TVFocusable({
 
   const handleFocus = () => {
     setIsFocused(true);
+    Animated.timing(scaleAnim, {
+      toValue: 1.04,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
     if (onFocus) onFocus();
   };
 
   const handleBlur = () => {
     setIsFocused(false);
+    Animated.timing(scaleAnim, {
+      toValue: 1.0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
     if (onBlur) onBlur();
   };
 
@@ -93,7 +105,9 @@ export function TVFocusable({
       onFocus={handleFocus}
       onBlur={handleBlur}
     >
-      {children}
+      <Animated.View style={{ transform: [{ scale: scaleAnim }], flex: 1, width: "100%" }}>
+        {children}
+      </Animated.View>
     </Pressable>
   );
 }
@@ -101,9 +115,15 @@ export function TVFocusable({
 const styles = StyleSheet.create({
   container: {
     borderRadius: 8,
+    overflow: "visible", // Allow animated scale and glow shadow to show
   },
   focused: {
     borderWidth: 3,
-    borderColor: "#4361ee",
+    borderColor: "#06B6D4", // Neon Cyan focus indicator
+    shadowColor: "#06B6D4",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    elevation: 6,
   },
 });

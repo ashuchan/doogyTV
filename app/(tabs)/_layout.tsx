@@ -2,16 +2,19 @@ import React from "react";
 import { Tabs } from "expo-router";
 import { useTheme } from "@/context/theme-context";
 import { Home, Tv2, Heart, Settings, Search } from "lucide-react-native";
+import { isTVDevice, isGoogleTV } from "@/utils/tv-utils";
+import { TVTabSidebar } from "@/components/TVTabSidebar";
 
 export default function TabLayout() {
   const { theme, colors } = useTheme();
+  const isTV = isTVDevice() || isGoogleTV();
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.text,
-        tabBarStyle: {
+        tabBarStyle: isTV ? { display: "none" } : {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
         },
@@ -23,6 +26,7 @@ export default function TabLayout() {
           fontSize: 12,
         },
       }}
+      tabBar={isTV ? (props) => <TVTabSidebar {...props} /> : undefined}
     >
       <Tabs.Screen
         name="index"

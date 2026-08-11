@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { StyleSheet, View, Text, Pressable, ActivityIndicator, Platform, BackHandler, Dimensions } from "react-native";
+import { StyleSheet, View, Text, Pressable, ActivityIndicator, Platform, BackHandler, Dimensions, FlatList } from "react-native";
 import { Video, ResizeMode } from "expo-av";
 import { StatusBar } from "expo-status-bar";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -18,8 +18,10 @@ import {
   SkipBack, 
   SkipForward,
   Volume2,
-  VolumeX
+  VolumeX,
+  Menu
 } from "lucide-react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { isTVDevice, isLargeScreen, isGoogleTV } from "@/utils/tv-utils";
 import { TVFocusable } from "@/components/TVFocusable";
@@ -37,16 +39,19 @@ export default function PlayerScreen() {
   const hlsRef = useRef<any>(null);
   const [status, setStatus] = useState<any>({ isPlaying: true });
   const [controlsVisible, setControlsVisible] = useState(true);
+  const [guideVisible, setGuideVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [dimensions, setDimensions] = useState(Dimensions.get("window"));
   
-  const allChannels = playlists.flatMap(playlist => playlist.channels || []);
-  const channel = allChannels.find(c => c.id === id);
+  const [currentChannelId, setCurrentChannelId] = useState<string | undefined>(id);
   
-  const isFavorite = favorites.includes(id || "");
+  const allChannels = playlists.flatMap(playlist => playlist.channels || []);
+  const channel = allChannels.find(c => c.id === currentChannelId);
+  
+  const isFavorite = favorites.includes(currentChannelId || "");
   const isTV = isTVDevice() || isGoogleTV();
   const isLarge = isLargeScreen();
   const isLandscape = dimensions.width > dimensions.height;
@@ -64,11 +69,21 @@ export default function PlayerScreen() {
 
   useEffect(() => {
     if (id) {
-      addToRecentlyWatched(id);
+      setCurrentChannelId(id);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (currentChannelId) {
+      addToRecentlyWatched(currentChannelId);
     }
     
     // Handle back button on Android/TV
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (guideVisible) {
+        setGuideVisible(false);
+        return true;
+      }
       if (controlsVisible) {
         router.back();
         return true;
@@ -84,7 +99,7 @@ export default function PlayerScreen() {
       }
       backHandler.remove();
     };
-  }, [id, addToRecentlyWatched, controlsVisible]);
+  }, [currentChannelId, addToRecentlyWatched, controlsVisible, guideVisible]);
 
   // HLS playback setup for Web
   useEffect(() => {
@@ -255,8 +270,8 @@ export default function PlayerScreen() {
   };
 
   const handleFavoriteToggle = () => {
-    if (id) {
-      toggleFavorite(id);
+    if (currentChannelId) {
+      toggleFavorite(currentChannelId);
       showControls();
     }
   };
@@ -440,7 +455,7 @@ export default function PlayerScreen() {
           </View>
         )}
         
-        {controlsVisible && (
+        {controlsVisible && !guideVisible && (
           <View style={styles.controlsContainer}>
             <LinearGradient
               colors={["rgba(0,0,0,0.7)", "transparent"]}
@@ -492,10 +507,33 @@ export default function PlayerScreen() {
             </LinearGradient>
             
             <LinearGradient
-              colors={["transparent", "rgba(0,0,0,0.7)"]}
+              colors={["transparent", "rgba(0,0,0,0.85)"]}
               style={styles.bottomGradient}
             >
               <SafeAreaView edges={["bottom"]} style={styles.bottomControls}>
+                {/* Info HUD */}
+                <View style={styles.hudContainer}>
+                  {channel.logo && (
+                    <Image
+                      source={{ uri: channel.logo }}
+                      style={styles.hudLogo}
+                      contentFit="contain"
+                    />
+                  )}
+                  <View style={styles.hudTextContainer}>
+                    <View style={styles.hudTitleRow}>
+                      <Text style={styles.hudTitle}>{channel.name}</Text>
+                      <View style={styles.resolutionBadge}>
+                        <Text style={styles.resolutionText}>HD 1080p</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.epgText}>Now Playing: Live Broadcast</Text>
+                    <View style={styles.epgProgressBarBg}>
+                      <View style={[styles.epgProgressBarFill, { width: "45%" }]} />
+                    </View>
+                  </View>
+                </View>
+
                 <View style={styles.playbackControls}>
                   {renderControlButton(
                     status.isPlaying ? (
@@ -515,6 +553,14 @@ export default function PlayerScreen() {
                     ),
                     toggleMute
                   )}
+
+                  {renderControlButton(
+                    <Menu size={isTV ? 28 : (isLarge ? 26 : 24)} color={colors.white} />,
+                    () => {
+                      setGuideVisible(true);
+                      showControls();
+                    }
+                  )}
                   
                   <View style={styles.spacer} />
                   
@@ -531,6 +577,59 @@ export default function PlayerScreen() {
                 </View>
               </SafeAreaView>
             </LinearGradient>
+          </View>
+        )}
+
+        {guideVisible && (
+          <View style={styles.guideContainer}>
+            <Text style={styles.guideTitle}>Channel Guide</Text>
+            <FlatList
+              data={allChannels}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => {
+                const isCurrent = item.id === currentChannelId;
+                return (
+                  <TVFocusable
+                    style={[
+                      styles.guideItem,
+                      isCurrent && { backgroundColor: "rgba(6, 182, 212, 0.15)" }
+                    ]}
+                    focusedStyle={{ borderColor: colors.info }}
+                    onPress={() => {
+                      setCurrentChannelId(item.id);
+                      setGuideVisible(false);
+                      showControls();
+                    }}
+                  >
+                    <View style={styles.guideItemContent}>
+                      {item.logo ? (
+                        <Image
+                          source={{ uri: item.logo }}
+                          style={styles.guideItemLogo}
+                          contentFit="contain"
+                        />
+                      ) : (
+                        <View style={styles.guideItemLogoPlaceholder}>
+                          <Text style={styles.guideItemPlaceholderText}>
+                            {item.name.substring(0, 2).toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                      <Text 
+                        style={[
+                          styles.guideItemName, 
+                          isCurrent && { color: colors.info }
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.name}
+                      </Text>
+                    </View>
+                  </TVFocusable>
+                );
+              }}
+              contentContainerStyle={styles.guideListContent}
+            />
           </View>
         )}
       </Pressable>
@@ -602,7 +701,7 @@ const styles = StyleSheet.create({
     height: 100,
   },
   bottomGradient: {
-    height: 100,
+    height: 220,
     justifyContent: "flex-end",
   },
   topControls: {
@@ -636,6 +735,123 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   spacer: {
+    flex: 1,
+  },
+  hudContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(30, 41, 59, 0.7)",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.05)",
+  },
+  hudLogo: {
+    width: 60,
+    height: 45,
+    marginRight: 16,
+    borderRadius: 6,
+    backgroundColor: "rgba(0,0,0,0.1)",
+  },
+  hudTextContainer: {
+    flex: 1,
+  },
+  hudTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  hudTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  resolutionBadge: {
+    backgroundColor: "#06B6D4",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 10,
+  },
+  resolutionText: {
+    color: "#090D16",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  epgText: {
+    color: "#9CA3AF",
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  epgProgressBarBg: {
+    height: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  epgProgressBarFill: {
+    height: "100%",
+    backgroundColor: "#06B6D4",
+  },
+  guideContainer: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 320,
+    backgroundColor: "rgba(9, 13, 22, 0.95)",
+    borderRightWidth: 1,
+    borderRightColor: "rgba(255, 255, 255, 0.1)",
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    zIndex: 200,
+  },
+  guideTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  guideListContent: {
+    paddingBottom: 20,
+  },
+  guideItem: {
+    width: "100%",
+    borderRadius: 8,
+    marginVertical: 4,
+    padding: 8,
+  },
+  guideItemContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  guideItemLogo: {
+    width: 40,
+    height: 30,
+    marginRight: 12,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  guideItemLogoPlaceholder: {
+    width: 40,
+    height: 30,
+    marginRight: 12,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  guideItemPlaceholderText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  guideItemName: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "500",
     flex: 1,
   },
 });

@@ -66,32 +66,32 @@ export const tvStyles = {
   // Larger focus ring for TV navigation
   focusRing: {
     borderWidth: 3,
-    borderColor: "#4361ee",
+    borderColor: "#06B6D4", // Match Neon Cyan
     borderRadius: 8,
   },
   
   // Larger text for TV viewing distance
   text: {
-    fontSize: 18,
+    fontSize: 16,
   },
   
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "bold",
   },
   
   // Larger touch targets for remote navigation
   touchable: {
-    minHeight: 60,
-    minWidth: 60,
-    padding: 16,
-    margin: 8,
+    minHeight: 56,
+    minWidth: 56,
+    padding: 14,
+    margin: 6,
   },
   
   // Card styles optimized for TV
   card: {
-    padding: 16,
-    margin: 12,
+    padding: 12,
+    margin: 8,
     borderRadius: 8,
   },
 };
@@ -101,9 +101,14 @@ export function getPlatformStyles(tvStyle: any, mobileStyle: any) {
   return isTVDevice() || isGoogleTV() ? tvStyle : mobileStyle;
 }
 
-// Calculate appropriate font size based on platform
+// Calculate appropriate font size based on platform with caps to fit content
 export function getFontSize(baseFontSize: number): number {
-  return isTVDevice() || isGoogleTV() || isLargeScreen() ? baseFontSize * 1.5 : baseFontSize;
+  if (isTVDevice() || isGoogleTV()) {
+    if (baseFontSize >= 24) return Math.min(baseFontSize * 1.15, 28); // Cap TV headers at 28px
+    if (baseFontSize >= 16) return Math.min(baseFontSize * 1.2, 20);  // Cap sub-headers
+    return Math.max(baseFontSize * 1.25, 14); // Keep body text readable
+  }
+  return isLargeScreen() ? baseFontSize * 1.25 : baseFontSize;
 }
 
 // Calculate appropriate spacing based on platform

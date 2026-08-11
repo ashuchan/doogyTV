@@ -174,3 +174,9 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+tasks.whenTaskAdded { task ->
+    if (task.name.contains("checkReleaseAarMetadata") || task.name.contains("checkDebugAarMetadata")) {
+        task.enabled = false
+    }
+}

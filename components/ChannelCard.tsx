@@ -63,7 +63,7 @@ export function ChannelCard({ channel, onPress, index = 0, rowIndex = 0 }: Chann
         onPress={onPress}
         {...getNextFocusProps()}
       >
-        <View style={[styles.imageContainer, { height: cardWidth * 0.6 }]}>
+        <View style={[styles.imageContainer, { height: cardWidth * 0.5625 }]}>
           {channel.logo ? (
             <Image
               source={{ uri: channel.logo }}
@@ -89,10 +89,10 @@ export function ChannelCard({ channel, onPress, index = 0, rowIndex = 0 }: Chann
             styles.name, 
             { 
               color: colors.text,
-              fontSize: getFontSize(16)
+              fontSize: getFontSize(14) // Adjusted card title text to 14px for content density
             }
           ]}
-          numberOfLines={2}
+          numberOfLines={1} // Single line to fit content cleanly
           ellipsizeMode="tail"
         >
           {channel.name}
@@ -101,7 +101,7 @@ export function ChannelCard({ channel, onPress, index = 0, rowIndex = 0 }: Chann
           styles.category, 
           { 
             color: colors.textSecondary,
-            fontSize: getFontSize(14)
+            fontSize: getFontSize(12)
           }
         ]}>
           {channel.category}
@@ -125,7 +125,7 @@ export function ChannelCard({ channel, onPress, index = 0, rowIndex = 0 }: Chann
     >
       <View style={[
         styles.imageContainer, 
-        { height: isLarge ? 100 : 80 }
+        { height: (isLarge ? 180 : 140) * 0.5625 }
       ]}>
         {channel.logo ? (
           <Image
