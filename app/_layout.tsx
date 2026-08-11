@@ -1,7 +1,8 @@
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
-import { Platform, View, Text } from "react-native";
+import { useEffect, useState, useRef } from "react";
+import { Platform, View, Text, StyleSheet, Pressable } from "react-native";
+import { Video, ResizeMode } from "expo-av";
 import { ErrorBoundary } from "./error-boundary";
 import { ThemeProvider } from "@/context/theme-context";
 import { setupBackgroundFetch } from "@/utils/background-fetch";
@@ -43,8 +44,12 @@ if (Platform.OS !== "web") {
   SplashScreen.preventAutoHideAsync();
 }
 
+const introVideoAsset = require("../assets/intro.mp4");
+
 export default function RootLayout() {
   console.log("[DOGGYTV] Rendering RootLayout component...");
+  const [showIntro, setShowIntro] = useState(true);
+  const videoRef = useRef<Video>(null);
 
   useEffect(() => {
     setupBackgroundFetch();
@@ -53,16 +58,83 @@ export default function RootLayout() {
     }
   }, []);
 
+  const finishIntro = () => {
+    setShowIntro(false);
+  };
+
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <View style={{ flex: 1, minHeight: "100vh" as any, backgroundColor: "#0f172a" }}>
-          <RootLayoutNav />
+          {showIntro ? (
+            <Pressable style={styles.introContainer} onPress={finishIntro}>
+              {Platform.OS === "web" ? (
+                <video
+                  src={introVideoAsset}
+                  autoPlay
+                  muted
+                  playsInline
+                  style={{
+                    position: "absolute",
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                  onEnded={finishIntro}
+                />
+              ) : (
+                <Video
+                  ref={videoRef}
+                  source={introVideoAsset}
+                  style={StyleSheet.absoluteFill}
+                  resizeMode={ResizeMode.COVER}
+                  shouldPlay
+                  isMuted={false}
+                  onPlaybackStatusUpdate={(status: any) => {
+                    if (status.didJustFinish) {
+                      finishIntro();
+                    }
+                  }}
+                />
+              )}
+              <View style={styles.skipButton}>
+                <Text style={styles.skipText}>Press anywhere to skip</Text>
+              </View>
+            </Pressable>
+          ) : (
+            <RootLayoutNav />
+          )}
         </View>
       </ThemeProvider>
     </ErrorBoundary>
   );
 }
+
+const styles = StyleSheet.create({
+  introContainer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 9999,
+  },
+  skipButton: {
+    position: "absolute",
+    bottom: 40,
+    right: 40,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  skipText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+});
 
 function RootLayoutNav() {
   return (
