@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { StyleSheet, View, Text, Pressable, ActivityIndicator, Platform, BackHandler, Dimensions, FlatList } from "react-native";
+import { StyleSheet, View, Text, Pressable, ActivityIndicator, Platform, BackHandler, Dimensions, FlatList, findNodeHandle } from "react-native";
 import { Video, ResizeMode } from "expo-av";
 import { StatusBar } from "expo-status-bar";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -46,6 +46,31 @@ export default function PlayerScreen() {
   const [muted, setMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [dimensions, setDimensions] = useState(Dimensions.get("window"));
+  
+  const dpadCenterRef = useRef<any>(null);
+  const dpadUpRef = useRef<any>(null);
+  const dpadDownRef = useRef<any>(null);
+  const dpadLeftRef = useRef<any>(null);
+
+  const [upNode, setUpNode] = useState<number | null>(null);
+  const [downNode, setDownNode] = useState<number | null>(null);
+  const [leftNode, setLeftNode] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isTVDevice()) {
+      const timer = setTimeout(() => {
+        try {
+          if (dpadUpRef.current) setUpNode(findNodeHandle(dpadUpRef.current));
+          if (dpadDownRef.current) setDownNode(findNodeHandle(dpadDownRef.current));
+          if (dpadLeftRef.current) setLeftNode(findNodeHandle(dpadLeftRef.current));
+        } catch (e) {
+          console.log("Failed to resolve node handles", e);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [guideVisible]);
+
   
   const [currentChannelId, setCurrentChannelId] = useState<string | undefined>(id);
   
@@ -410,6 +435,53 @@ export default function PlayerScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar hidden />
+      
+      {isTV && !guideVisible && (
+        <View style={styles.invisibleFocusGrid}>
+          <TVFocusable
+            ref={dpadCenterRef}
+            style={styles.invisibleFocusTarget}
+            isDefault={true}
+            nextFocusUp={upNode || undefined}
+            nextFocusDown={downNode || undefined}
+            nextFocusLeft={leftNode || undefined}
+            onPress={() => showControls()}
+          >
+            <View />
+          </TVFocusable>
+          <TVFocusable
+            ref={dpadUpRef}
+            style={styles.invisibleFocusTarget}
+            onFocus={() => {
+              playPreviousChannel();
+              dpadCenterRef.current?.requestTVFocus();
+            }}
+          >
+            <View />
+          </TVFocusable>
+          <TVFocusable
+            ref={dpadDownRef}
+            style={styles.invisibleFocusTarget}
+            onFocus={() => {
+              playNextChannel();
+              dpadCenterRef.current?.requestTVFocus();
+            }}
+          >
+            <View />
+          </TVFocusable>
+          <TVFocusable
+            ref={dpadLeftRef}
+            style={styles.invisibleFocusTarget}
+            onFocus={() => {
+              setGuideVisible(true);
+              showControls();
+            }}
+          >
+            <View />
+          </TVFocusable>
+        </View>
+      )}
+
       
       <Pressable 
         id="video-container"
@@ -903,5 +975,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     flex: 1,
+  },
+  invisibleFocusGrid: {
+    position: "absolute",
+    width: 1,
+    height: 1,
+    opacity: 0,
+    zIndex: 9999,
+  },
+  invisibleFocusTarget: {
+    width: 1,
+    height: 1,
   },
 });

@@ -71,34 +71,41 @@ export function useTVRemoteControl({
         window.removeEventListener("keydown", handleKeyDown);
       };
     } else {
-      const tvEventHandler = new TVEventHandler();
-      tvEventHandler.enable(null, (_cmp, evt) => {
-        if (!evt) return;
-        switch (evt.eventType) {
-          case "up":
-            onUp?.();
-            break;
-          case "down":
-            onDown?.();
-            break;
-          case "left":
-            onLeft?.();
-            break;
-          case "right":
-            onRight?.();
-            break;
-          case "select":
-            onSelect?.();
-            break;
-          case "back":
-            onBack?.();
-            break;
-        }
-      });
+      // Prevent crash on standard react-native where TVEventHandler is undefined
+      if (typeof TVEventHandler !== "undefined" && TVEventHandler !== null) {
+        try {
+          const tvEventHandler = new TVEventHandler();
+          tvEventHandler.enable(null, (_cmp, evt) => {
+            if (!evt) return;
+            switch (evt.eventType) {
+              case "up":
+                onUp?.();
+                break;
+              case "down":
+                onDown?.();
+                break;
+              case "left":
+                onLeft?.();
+                break;
+              case "right":
+                onRight?.();
+                break;
+              case "select":
+                onSelect?.();
+                break;
+              case "back":
+                onBack?.();
+                break;
+            }
+          });
 
-      return () => {
-        tvEventHandler.disable();
-      };
+          return () => {
+            tvEventHandler.disable();
+          };
+        } catch (e) {
+          console.warn("Failed to initialize TVEventHandler", e);
+        }
+      }
     }
   }, [onUp, onDown, onLeft, onRight, onSelect, onBack, active]);
 }

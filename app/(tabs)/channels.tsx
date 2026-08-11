@@ -24,9 +24,9 @@ export default function ChannelsScreen() {
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const previewVideoRef = useRef<Video>(null);
 
-  const isTV = isTVDevice() || isLargeScreen();
+  const isTV = isTVDevice() || isGoogleTV() || isLargeScreen();
   const isLandscape = dimensions.width > dimensions.height;
-  const isTivimateLayout = isTV && isLandscape;
+  const isTivimateLayout = isTV;
 
   // Listen for dimension changes
   useEffect(() => {

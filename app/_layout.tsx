@@ -6,6 +6,7 @@ import { Video, ResizeMode } from "expo-av";
 import { ErrorBoundary } from "./error-boundary";
 import { ThemeProvider } from "@/context/theme-context";
 import { setupBackgroundFetch } from "@/utils/background-fetch";
+import { usePlaylistStore } from "@/store/playlist-store";
 
 if (typeof global === "undefined") {
   (globalThis as any).global = globalThis;
@@ -41,14 +42,17 @@ export const unstable_settings = {
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 if (Platform.OS !== "web") {
-  SplashScreen.preventAutoHideAsync();
+  SplashScreen.preventAutoHideAsync().catch(() => {});
 }
 
 const introVideoAsset = require("../assets/intro.mp4");
 
 export default function RootLayout() {
   console.log("[DOGGYTV] Rendering RootLayout component...");
-  const [showIntro, setShowIntro] = useState(true);
+  const { playlists, loading } = usePlaylistStore();
+  
+  const [videoFinished, setVideoFinished] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const videoRef = useRef<Video>(null);
 
   useEffect(() => {
@@ -58,15 +62,36 @@ export default function RootLayout() {
     }
   }, []);
 
+  // Update dataLoaded when playlists are populated and not loading
+  useEffect(() => {
+    if (playlists.length > 0 && !loading) {
+      setDataLoaded(true);
+    }
+  }, [playlists, loading]);
+
+  // Fallback timer to prevent getting stuck if playlists fail or take too long
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDataLoaded(true);
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const finishIntro = () => {
-    setShowIntro(false);
+    setVideoFinished(true);
   };
+
+  const showIntroActive = !videoFinished || !dataLoaded;
 
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <View style={{ flex: 1, minHeight: "100vh" as any, backgroundColor: "#0f172a" }}>
-          {showIntro ? (
+          {/* Main App Navigation Stack - mounted in background */}
+          <RootLayoutNav />
+
+          {/* Intro Video Overlay */}
+          {showIntroActive && (
             <Pressable style={styles.introContainer} onPress={finishIntro}>
               {Platform.OS === "web" ? (
                 <video
@@ -74,13 +99,18 @@ export default function RootLayout() {
                   autoPlay
                   muted
                   playsInline
+                  loop={!dataLoaded}
                   style={{
                     position: "absolute",
                     width: "100%",
                     height: "100%",
                     objectFit: "cover",
                   }}
-                  onEnded={finishIntro}
+                  onEnded={() => {
+                    if (dataLoaded) {
+                      finishIntro();
+                    }
+                  }}
                 />
               ) : (
                 <Video
@@ -90,9 +120,12 @@ export default function RootLayout() {
                   resizeMode={ResizeMode.COVER}
                   shouldPlay
                   isMuted={false}
+                  isLooping={!dataLoaded}
                   onPlaybackStatusUpdate={(status: any) => {
                     if (status.didJustFinish) {
-                      finishIntro();
+                      if (dataLoaded) {
+                        finishIntro();
+                      }
                     }
                   }}
                 />
@@ -101,8 +134,6 @@ export default function RootLayout() {
                 <Text style={styles.skipText}>Press anywhere to skip</Text>
               </View>
             </Pressable>
-          ) : (
-            <RootLayoutNav />
           )}
         </View>
       </ThemeProvider>
