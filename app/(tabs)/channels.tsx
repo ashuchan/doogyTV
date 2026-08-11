@@ -64,10 +64,10 @@ export default function ChannelsScreen() {
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
     }
-    // Debounce preview playing to avoid streaming every channel when scrolling fast
+    // Debounce preview playing to avoid streaming every channel when scrolling fast (1 second)
     debounceTimer.current = setTimeout(() => {
       setFocusedChannel(channel);
-    }, 300);
+    }, 1000);
   };
 
   // Enable remote keys in the Channels screen to navigate categories and channels
@@ -176,6 +176,7 @@ export default function ChannelsScreen() {
               keyExtractor={(item) => item || "all"}
               renderItem={renderCategoryItem}
               showsVerticalScrollIndicator={false}
+              removeClippedSubviews={false}
             />
           </View>
 
@@ -233,6 +234,7 @@ export default function ChannelsScreen() {
                 keyExtractor={(item) => item.id}
                 renderItem={renderTivimateChannelItem}
                 showsVerticalScrollIndicator={true}
+                removeClippedSubviews={false}
                 getItemLayout={(data, index) => ({
                   length: 70,
                   offset: 70 * index,
@@ -357,7 +359,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   previewVideoBox: {
-    width: "45%",
+    height: "100%",
     aspectRatio: 16 / 9,
     backgroundColor: "#000",
     borderRadius: 8,

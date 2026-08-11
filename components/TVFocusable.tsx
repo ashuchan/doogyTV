@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useImperativeHandle } from "react";
 import { 
   View, 
   Pressable, 
@@ -24,7 +24,7 @@ interface TVFocusableProps extends PressableProps {
   nextFocusRight?: number | null | undefined;
 }
 
-export function TVFocusable({
+export const TVFocusable = React.forwardRef<any, TVFocusableProps>(({
   children,
   style,
   focusedStyle,
@@ -36,26 +36,38 @@ export function TVFocusable({
   nextFocusLeft,
   nextFocusRight,
   ...props
-}: TVFocusableProps) {
+}: TVFocusableProps, ref) => {
   const [isFocused, setIsFocused] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const ref = useRef(null);
+  const pressableRef = useRef<any>(null);
   const isTV = isTVDevice() || isGoogleTV();
   
+  useImperativeHandle(ref, () => ({
+    requestTVFocus: () => {
+      try {
+        pressableRef.current?.requestTVFocus();
+      } catch (e) {
+        console.log("Failed to request TV focus via imperative handle", e);
+      }
+    },
+    focus: () => {
+      try {
+        pressableRef.current?.focus();
+      } catch (e) {
+        console.log("Failed to focus via imperative handle", e);
+      }
+    }
+  }));
+
   useEffect(() => {
     if (isTV && isDefault) {
-      // Request focus for this element if it's the default
-      const tag = findNodeHandle(ref.current);
-      if (tag) {
-        setTimeout(() => {
-          try {
-            // @ts-ignore - This is a TV-specific API
-            ref.current?.requestTVFocus();
-          } catch (e) {
-            console.log("Failed to request TV focus", e);
-          }
-        }, 100);
-      }
+      setTimeout(() => {
+        try {
+          pressableRef.current?.requestTVFocus();
+        } catch (e) {
+          console.log("Failed to request TV focus in useEffect", e);
+        }
+      }, 100);
     }
   }, [isDefault, isTV]);
 
@@ -93,7 +105,7 @@ export function TVFocusable({
 
   return (
     <Pressable
-      ref={ref}
+      ref={pressableRef}
       {...props}
       {...tvProps}
       style={[
@@ -105,25 +117,26 @@ export function TVFocusable({
       onFocus={handleFocus}
       onBlur={handleBlur}
     >
-      <Animated.View style={{ transform: [{ scale: scaleAnim }], flex: 1, width: "100%" }}>
+      <Animated.View style={{ transform: [{ scale: scaleAnim }], width: "100%", height: "100%", justifyContent: "center" }}>
         {children}
       </Animated.View>
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 8,
-    overflow: "visible", // Allow animated scale and glow shadow to show
+    borderWidth: 2,
+    borderColor: "transparent",
+    borderRadius: 6,
+    overflow: "hidden",
   },
   focused: {
-    borderWidth: 3,
-    borderColor: "#06B6D4", // Neon Cyan focus indicator
+    borderColor: "#06B6D4", // Neon Cyan default focus color
     shadowColor: "#06B6D4",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 10,
+    elevation: 5,
   },
 });
