@@ -45,16 +45,32 @@ export const TVFocusable = React.forwardRef<any, TVFocusableProps>(({
   useImperativeHandle(ref, () => ({
     requestTVFocus: () => {
       try {
-        pressableRef.current?.requestTVFocus();
+        if (pressableRef.current?.requestTVFocus) {
+          pressableRef.current.requestTVFocus();
+        } else if (pressableRef.current?.focus) {
+          pressableRef.current.focus();
+        }
       } catch (e) {
         console.log("Failed to request TV focus via imperative handle", e);
       }
     },
     focus: () => {
       try {
-        pressableRef.current?.focus();
+        if (pressableRef.current?.focus) {
+          pressableRef.current.focus();
+        } else if (pressableRef.current?.requestTVFocus) {
+          pressableRef.current.requestTVFocus();
+        }
       } catch (e) {
         console.log("Failed to focus via imperative handle", e);
+      }
+    },
+    getNativeTag: () => {
+      try {
+        return findNodeHandle(pressableRef.current);
+      } catch (e) {
+        console.log("Failed to find node handle in getNativeTag", e);
+        return null;
       }
     }
   }));
@@ -63,7 +79,11 @@ export const TVFocusable = React.forwardRef<any, TVFocusableProps>(({
     if (isTV && isDefault) {
       setTimeout(() => {
         try {
-          pressableRef.current?.requestTVFocus();
+          if (pressableRef.current?.requestTVFocus) {
+            pressableRef.current.requestTVFocus();
+          } else if (pressableRef.current?.focus) {
+            pressableRef.current.focus();
+          }
         } catch (e) {
           console.log("Failed to request TV focus in useEffect", e);
         }

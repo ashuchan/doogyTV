@@ -60,9 +60,9 @@ export default function PlayerScreen() {
     if (isTVDevice()) {
       const timer = setTimeout(() => {
         try {
-          if (dpadUpRef.current) setUpNode(findNodeHandle(dpadUpRef.current));
-          if (dpadDownRef.current) setDownNode(findNodeHandle(dpadDownRef.current));
-          if (dpadLeftRef.current) setLeftNode(findNodeHandle(dpadLeftRef.current));
+          if (dpadUpRef.current) setUpNode(dpadUpRef.current.getNativeTag());
+          if (dpadDownRef.current) setDownNode(dpadDownRef.current.getNativeTag());
+          if (dpadLeftRef.current) setLeftNode(dpadLeftRef.current.getNativeTag());
         } catch (e) {
           console.log("Failed to resolve node handles", e);
         }
