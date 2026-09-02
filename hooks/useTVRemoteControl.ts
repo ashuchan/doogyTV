@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { Platform, TVEventHandler } from "react-native";
+import { Platform } from "react-native";
+import * as ReactNative from "react-native";
 
 interface RemoteControlConfig {
   onUp?: () => void;
@@ -9,6 +10,7 @@ interface RemoteControlConfig {
   onSelect?: () => void;
   onBack?: () => void;
   active?: boolean;
+  eventHandler?: any;
 }
 
 export function useTVRemoteControl({
@@ -19,6 +21,7 @@ export function useTVRemoteControl({
   onSelect,
   onBack,
   active = true,
+  eventHandler,
 }: RemoteControlConfig) {
   useEffect(() => {
     if (!active) return;
@@ -51,6 +54,9 @@ export function useTVRemoteControl({
             }
             break;
           case "Enter":
+          case " ":
+          case "NumpadEnter":
+          case "Select":
             if (onSelect) {
               e.preventDefault();
               onSelect();
@@ -72,10 +78,15 @@ export function useTVRemoteControl({
       };
     } else {
       // Prevent crash on standard react-native where TVEventHandler is undefined
-      if (typeof TVEventHandler !== "undefined" && TVEventHandler !== null) {
+      const TVEventHandlerClass = 
+        (ReactNative as any).TVEventHandler || 
+        (ReactNative as any).default?.TVEventHandler || 
+        (typeof require === "function" ? (require("react-native") as any)?.TVEventHandler : undefined);
+      
+      const tvHandler = eventHandler || (TVEventHandlerClass ? new TVEventHandlerClass() : null);
+      if (tvHandler) {
         try {
-          const tvEventHandler = new TVEventHandler();
-          tvEventHandler.enable(null, (_cmp, evt) => {
+          tvHandler.enable(null, (_cmp: any, evt: any) => {
             if (!evt) return;
             switch (evt.eventType) {
               case "up":
@@ -100,12 +111,12 @@ export function useTVRemoteControl({
           });
 
           return () => {
-            tvEventHandler.disable();
+            tvHandler.disable?.();
           };
         } catch (e) {
           console.warn("Failed to initialize TVEventHandler", e);
         }
       }
     }
-  }, [onUp, onDown, onLeft, onRight, onSelect, onBack, active]);
+  }, [onUp, onDown, onLeft, onRight, onSelect, onBack, active, eventHandler]);
 }

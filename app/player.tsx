@@ -98,20 +98,85 @@ export default function PlayerScreen() {
     showControls();
   };
 
+  const [focusedGuideIdx, setFocusedGuideIdx] = useState<number>(0);
+  const guideFlatListRef = useRef<FlatList>(null);
+
+  const openGuide = () => {
+    setGuideVisible(true);
+    const initialIdx = currentIdx >= 0 ? currentIdx : 0;
+    setFocusedGuideIdx(initialIdx);
+    showControls();
+    setTimeout(() => {
+      if (initialIdx >= 0 && guideFlatListRef.current) {
+        guideFlatListRef.current.scrollToIndex({
+          index: initialIdx,
+          animated: true,
+          viewPosition: 0.5,
+        });
+      }
+    }, 100);
+  };
+
   useTVRemoteControl({
     onUp: () => {
-      if (!guideVisible) {
+      if (guideVisible) {
+        if (focusedGuideIdx > 0) {
+          const nextIdx = focusedGuideIdx - 1;
+          setFocusedGuideIdx(nextIdx);
+          guideFlatListRef.current?.scrollToIndex({
+            index: nextIdx,
+            animated: true,
+            viewPosition: 0.5,
+          });
+        }
+      } else {
         playPreviousChannel();
       }
     },
     onDown: () => {
-      if (!guideVisible) {
+      if (guideVisible) {
+        if (focusedGuideIdx < categoryChannels.length - 1) {
+          const nextIdx = focusedGuideIdx + 1;
+          setFocusedGuideIdx(nextIdx);
+          guideFlatListRef.current?.scrollToIndex({
+            index: nextIdx,
+            animated: true,
+            viewPosition: 0.5,
+          });
+        }
+      } else {
         playNextChannel();
       }
     },
     onLeft: () => {
       if (!guideVisible) {
-        setGuideVisible(true);
+        openGuide();
+      }
+    },
+    onRight: () => {
+      if (guideVisible) {
+        setGuideVisible(false);
+        showControls();
+      }
+    },
+    onSelect: () => {
+      if (guideVisible) {
+        const target = categoryChannels[focusedGuideIdx];
+        if (target) {
+          setCurrentChannelId(target.id);
+          setGuideVisible(false);
+          showControls();
+        }
+      } else if (error) {
+        setError(null);
+        setLoading(true);
+        if (Platform.OS === "web" && webVideoRef.current) {
+          webVideoRef.current.load();
+          webVideoRef.current.play().catch(() => {});
+        }
+      } else if (controlsVisible) {
+        togglePlayPause();
+      } else {
         showControls();
       }
     },
@@ -175,7 +240,7 @@ export default function PlayerScreen() {
     };
   }, [currentChannelId, addToRecentlyWatched, controlsVisible, guideVisible]);
 
-  // HLS playback setup for Web
+  // HLS & Direct (MP4/HLS) playback setup for Web
   useEffect(() => {
     if (Platform.OS !== "web" || !channel?.url) return;
 
@@ -190,26 +255,65 @@ export default function PlayerScreen() {
         .then(() => {
           setStatus({ isPlaying: true });
         })
-        .catch((err) => {
-          console.warn("Autoplay blocked:", err);
-          setStatus({ isPlaying: false });
+        .catch(() => {
+          // If browser policy blocks autoplay with sound, mute and retry play
+          video.muted = true;
+          setMuted(true);
+          video.play()
+            .then(() => setStatus({ isPlaying: true }))
+            .catch((err) => {
+              console.warn("Autoplay blocked even when muted:", err);
+            });
         });
     };
 
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = channel.url;
-      video.addEventListener("loadedmetadata", () => {
+    const streamUrl = channel.url.replace(/[\r\n]/g, "").trim();
+    const isM3U8 = streamUrl.toLowerCase().includes(".m3u8") || streamUrl.toLowerCase().includes("hls");
+
+    if (!isM3U8) {
+      // Direct stream / MP4
+      video.src = streamUrl;
+      const onLoaded = () => {
         setLoading(false);
         playVideo();
-      });
-      video.addEventListener("error", () => {
+      };
+      const onError = () => {
         setError("Failed to load the stream. Please try again later.");
         setLoading(false);
-      });
+      };
+
+      video.addEventListener("loadeddata", onLoaded);
+      video.addEventListener("error", onError);
+
+      return () => {
+        video.removeEventListener("loadeddata", onLoaded);
+        video.removeEventListener("error", onError);
+      };
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      // Safari Native HLS
+      video.src = streamUrl;
+      const onLoaded = () => {
+        setLoading(false);
+        playVideo();
+      };
+      const onError = () => {
+        setError("Failed to load the stream. Please try again later.");
+        setLoading(false);
+      };
+
+      video.addEventListener("loadedmetadata", onLoaded);
+      video.addEventListener("error", onError);
+
+      return () => {
+        video.removeEventListener("loadedmetadata", onLoaded);
+        video.removeEventListener("error", onError);
+      };
     } else {
+      // Chrome / Firefox Hls.js
       try {
-        const Hls = require("hls.js");
-        if (!Hls.isSupported()) {
+        const HlsModule = require("hls.js");
+        const Hls = HlsModule.default || HlsModule;
+        if (!Hls || !Hls.isSupported()) {
           setError("HLS playback is not supported on this browser.");
           setLoading(false);
           return;
@@ -222,10 +326,11 @@ export default function PlayerScreen() {
         const hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
+          backBufferLength: 90,
         });
 
         hlsRef.current = hls;
-        hls.loadSource(channel.url);
+        hls.loadSource(streamUrl);
         hls.attachMedia(video);
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -233,13 +338,21 @@ export default function PlayerScreen() {
           playVideo();
         });
 
+        let retriedWithProxy = false;
+
         hls.on(Hls.Events.ERROR, (event: any, data: any) => {
           console.error("HLS error:", data);
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
-                console.log("Fatal network error, trying to recover...");
-                hls.startLoad();
+                if (!retriedWithProxy && Platform.OS === "web" && !streamUrl.includes("corsproxy") && !streamUrl.includes("allorigins")) {
+                  retriedWithProxy = true;
+                  console.log("Network/CORS error on Web, attempting proxy stream fallback...");
+                  hls.loadSource(`https://corsproxy.io/?url=${encodeURIComponent(streamUrl)}`);
+                } else {
+                  console.log("Fatal network error, trying to recover...");
+                  hls.startLoad();
+                }
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
                 console.log("Fatal media error, trying to recover...");
@@ -705,10 +818,20 @@ export default function PlayerScreen() {
           <View style={styles.guideContainer}>
             <Text style={styles.guideTitle}>Channel Guide</Text>
             <FlatList
+              ref={guideFlatListRef}
               data={categoryChannels}
               keyExtractor={(item) => item.id}
-              renderItem={({ item }) => {
+              showsVerticalScrollIndicator={false}
+              removeClippedSubviews={false}
+              onScrollToIndexFailed={() => {}}
+              getItemLayout={(data, index) => ({
+                length: 64,
+                offset: 64 * index,
+                index,
+              })}
+              renderItem={({ item, index }) => {
                 const isCurrent = item.id === currentChannelId;
+                const isSpatialFocused = guideVisible && focusedGuideIdx === index;
                 return (
                   <TVFocusable
                     style={[
@@ -717,6 +840,7 @@ export default function PlayerScreen() {
                     ]}
                     focusedStyle={{ borderColor: colors.info }}
                     isDefault={isCurrent}
+                    isSpatialFocused={isSpatialFocused}
                     onPress={() => {
                       setCurrentChannelId(item.id);
                       setGuideVisible(false);

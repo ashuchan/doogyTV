@@ -1,8 +1,10 @@
-import React, { useRef, useState } from "react";
-import { View, Text, StyleSheet, Animated, Dimensions } from "react-native";
+import React, { useRef, useEffect, useState } from "react";
+import { View, Text, StyleSheet, Animated } from "react-native";
 import { useTheme } from "@/context/theme-context";
 import { TVFocusable } from "@/components/TVFocusable";
 import { Home, Tv2, Heart, Settings, Search } from "lucide-react-native";
+import { useTVNavigationStore } from "@/store/tv-navigation-store";
+import { useTVRemoteControl } from "@/hooks/useTVRemoteControl";
 
 interface TVTabSidebarProps {
   state: any;
@@ -12,29 +14,59 @@ interface TVTabSidebarProps {
 
 export function TVTabSidebar({ state, descriptors, navigation }: TVTabSidebarProps) {
   const { colors } = useTheme();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const { activeZone, sidebarIndex, setSidebarIndex, setActiveZone } = useTVNavigationStore();
+  const [localExpanded, setLocalExpanded] = useState(false);
   const widthAnim = useRef(new Animated.Value(70)).current;
 
-  const handleSidebarFocus = () => {
-    setIsExpanded(true);
+  const isExpanded = localExpanded || activeZone === "sidebar";
+
+  useEffect(() => {
     Animated.timing(widthAnim, {
-      toValue: 220,
-      duration: 200,
+      toValue: isExpanded ? 220 : 70,
+      duration: 180,
       useNativeDriver: false,
     }).start();
+  }, [isExpanded]);
+
+  const handleSidebarFocus = (index: number) => {
+    setLocalExpanded(true);
+    setActiveZone("sidebar");
+    setSidebarIndex(index);
   };
 
   const handleSidebarBlur = () => {
-    // Small timeout to check if focus moved to another item in the sidebar
     setTimeout(() => {
-      setIsExpanded(false);
-      Animated.timing(widthAnim, {
-        toValue: 70,
-        duration: 200,
-        useNativeDriver: false,
-      }).start();
+      setLocalExpanded(false);
+      setActiveZone("content");
     }, 50);
   };
+
+  // TV Remote controls when sidebar is active
+  useTVRemoteControl({
+    active: isExpanded,
+    onUp: () => {
+      if (sidebarIndex > 0) {
+        setSidebarIndex(sidebarIndex - 1);
+      }
+    },
+    onDown: () => {
+      if (sidebarIndex < state.routes.length - 1) {
+        setSidebarIndex(sidebarIndex + 1);
+      }
+    },
+    onRight: () => {
+      setLocalExpanded(false);
+      setActiveZone("content");
+    },
+    onSelect: () => {
+      const route = state.routes[sidebarIndex];
+      if (route) {
+        navigation.navigate({ name: route.name, merge: true });
+        setLocalExpanded(false);
+        setActiveZone("content");
+      }
+    },
+  });
 
   const icons = {
     index: Home,
@@ -65,21 +97,24 @@ export function TVTabSidebar({ state, descriptors, navigation }: TVTabSidebarPro
         {state.routes.map((route: any, index: number) => {
           const { options } = descriptors[route.key];
           const label = options.title !== undefined ? options.title : route.name;
-          const isFocused = state.index === index;
+          const isTabActive = state.index === index;
+          const isItemSpatialFocused = isExpanded && sidebarIndex === index;
           
-          // Get matching Icon component
           const Icon = icons[route.name as keyof typeof icons] || Tv2;
 
           const onPress = () => {
+            setSidebarIndex(index);
             const event = navigation.emit({
               type: "tabPress",
               target: route.key,
               canPreventDefault: true,
             });
 
-            if (!isFocused && !event.defaultPrevented) {
+            if (!isTabActive && !event.defaultPrevented) {
               navigation.navigate({ name: route.name, merge: true });
             }
+            setLocalExpanded(false);
+            setActiveZone("content");
           };
 
           return (
@@ -87,24 +122,25 @@ export function TVTabSidebar({ state, descriptors, navigation }: TVTabSidebarPro
               key={route.key}
               testID={`sidebar-nav-${route.name}`}
               onPress={onPress}
-              onFocus={handleSidebarFocus}
+              onFocus={() => handleSidebarFocus(index)}
               onBlur={handleSidebarBlur}
+              isSpatialFocused={isItemSpatialFocused}
               style={[
                 styles.navItem,
-                isFocused && { backgroundColor: "rgba(255, 255, 255, 0.05)" }
+                isTabActive && { backgroundColor: "rgba(255, 255, 255, 0.06)" }
               ]}
               focusedStyle={{ borderColor: colors.info }}
             >
               <View style={styles.navItemContent}>
                 <Icon 
                   size={24} 
-                  color={isFocused ? colors.info : colors.text} 
+                  color={isTabActive || isItemSpatialFocused ? colors.info : colors.text} 
                 />
                 {isExpanded && (
                   <Text 
                     style={[
                       styles.navLabel, 
-                      { color: isFocused ? colors.info : colors.text }
+                      { color: isTabActive || isItemSpatialFocused ? colors.info : colors.text }
                     ]}
                     numberOfLines={1}
                   >

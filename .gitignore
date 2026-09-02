@@ -35,3 +35,8 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 .vercel
+
+# tests and logs
+coverage/
+*.log
+uidump*.xml

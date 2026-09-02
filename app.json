@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "doggyTV",
+    "name": "doggyTv",
     "slug": "doggytv",
     "version": "1.0.0",
     "orientation": "default",
@@ -15,14 +15,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "icu.jehadurre.doggytv"
+      "bundleIdentifier": "icu.jehadurre.doggytvapp"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.jpg",
         "backgroundColor": "#ffffff"
       },
-      "package": "icu.jehadurre.doggytv",
+      "package": "icu.jehadurre.doggytvapp",
       "softwareKeyboardLayoutMode": "pan",
       "permissions": [
         "INTERNET"

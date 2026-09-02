@@ -10,8 +10,16 @@ export function isTVDevice(): boolean {
   if (Platform.OS === "android") {
     const { width, height } = Dimensions.get("window");
     // Most TV screens are large and have specific aspect ratios
-    // This is a simple heuristic that can be improved
     return width >= 960 && height >= 540;
+  }
+
+  // Support TV simulation on Web for local desktop testing
+  if (Platform.OS === "web") {
+    if (typeof window !== "undefined") {
+      const isTVQuery = window.location?.search?.includes("tv=1");
+      const isDesktopWidth = window.innerWidth >= 960;
+      return isTVQuery || isDesktopWidth;
+    }
   }
   
   return false;

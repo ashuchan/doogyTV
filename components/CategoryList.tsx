@@ -10,9 +10,16 @@ type CategoryListProps = {
   channels: Channel[];
   onChannelPress: (channelId: string) => void;
   categoryIndex?: number;
+  isItemFocused?: (rowIndex: number, colIndex: number) => boolean;
 };
 
-export function CategoryList({ category, channels, onChannelPress, categoryIndex = 0 }: CategoryListProps) {
+export function CategoryList({ 
+  category, 
+  channels, 
+  onChannelPress, 
+  categoryIndex = 0,
+  isItemFocused,
+}: CategoryListProps) {
   const { colors } = useTheme();
   const isTV = isTVDevice() || isGoogleTV();
   const isLarge = isLargeScreen();
@@ -56,6 +63,7 @@ export function CategoryList({ category, channels, onChannelPress, categoryIndex
               onPress={() => onChannelPress(channel.id)}
               index={index}
               rowIndex={categoryIndex}
+              isSpatialFocused={isItemFocused?.(categoryIndex, index)}
             />
           ))}
         </View>

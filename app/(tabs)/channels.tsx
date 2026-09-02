@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { StyleSheet, View, Text, FlatList, Pressable, ActivityIndicator, Dimensions } from "react-native";
+import { StyleSheet, View, Text, FlatList, Pressable, ActivityIndicator, Dimensions, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Video, ResizeMode } from "expo-av";
@@ -7,16 +7,19 @@ import { useTheme } from "@/context/theme-context";
 import { usePlaylistStore } from "@/store/playlist-store";
 import { Channel } from "@/types/channel";
 import { TVFocusable } from "@/components/TVFocusable";
-import { isTVDevice, isLargeScreen, getFontSize, getSpacing } from "@/utils/tv-utils";
+import { isTVDevice, isLargeScreen, getFontSize, getSpacing, isGoogleTV } from "@/utils/tv-utils";
 import { Image } from "expo-image";
 import { Play, Tv2 } from "lucide-react-native";
 import { useTVRemoteControl } from "@/hooks/useTVRemoteControl";
+import { useIsFocused } from "@react-navigation/native";
+import { useTVNavigationStore } from "@/store/tv-navigation-store";
 
 export default function ChannelsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { playlists, loading } = usePlaylistStore();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const isScreenFocused = useIsFocused();
   
   // Tivimate focused channel for preview
   const [focusedChannel, setFocusedChannel] = useState<Channel | null>(null);
@@ -28,6 +31,33 @@ export default function ChannelsScreen() {
   const isLandscape = dimensions.width > dimensions.height;
   const isTivimateLayout = isTV;
 
+  const firstCategoryRef = useRef<any>(null);
+
+  const safePlaylists = Array.isArray(playlists) ? playlists : [];
+  const allChannels = safePlaylists.flatMap(playlist => (Array.isArray(playlist?.channels) ? playlist.channels : []));
+  const categories = [...new Set(allChannels.map(channel => channel?.category).filter(Boolean))].sort();
+  
+  const filteredChannels = selectedCategory
+    ? allChannels.filter(channel => channel?.category === selectedCategory)
+    : allChannels;
+
+  // Request focus on the first category when the screen gains focus on TV
+  useEffect(() => {
+    if (isScreenFocused && isTV) {
+      const timer = setTimeout(() => {
+        if (firstCategoryRef.current) {
+          console.log("[DOGGYTV] Requesting focus on first category...");
+          if (firstCategoryRef.current.requestTVFocus) {
+            firstCategoryRef.current.requestTVFocus();
+          } else if (firstCategoryRef.current.focus) {
+            firstCategoryRef.current.focus();
+          }
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isScreenFocused, isTV, loading, categories.length]);
+
   // Listen for dimension changes
   useEffect(() => {
     const subscription = Dimensions.addEventListener("change", ({ window }) => {
@@ -35,13 +65,6 @@ export default function ChannelsScreen() {
     });
     return () => subscription.remove();
   }, []);
-
-  const allChannels = playlists.flatMap(playlist => playlist.channels || []);
-  const categories = [...new Set(allChannels.map(channel => channel.category))].sort();
-  
-  const filteredChannels = selectedCategory
-    ? allChannels.filter(channel => channel.category === selectedCategory)
-    : allChannels;
 
   // Initialize selectedCategory and default focusedChannel
   useEffect(() => {
@@ -70,21 +93,135 @@ export default function ChannelsScreen() {
     }, 1000);
   };
 
+  const [activeColumn, setActiveColumn] = useState<number>(0); // 0 = categories, 1 = channels
+  const [focusedCategoryIdx, setFocusedCategoryIdx] = useState<number>(0);
+  const [focusedChannelIdx, setFocusedChannelIdx] = useState<number>(0);
+
+  const categoriesFlatListRef = useRef<FlatList<any>>(null);
+  const channelsFlatListRef = useRef<FlatList<any>>(null);
+
+  const { activeZone, setActiveZone, setSidebarIndex } = useTVNavigationStore();
+
+  const allCategoriesList = [null, ...categories];
+
+  // Auto-scroll channels list when focusedChannelIdx changes
+  useEffect(() => {
+    if (isTivimateLayout && activeZone === "content" && activeColumn === 1 && channelsFlatListRef.current) {
+      try {
+        channelsFlatListRef.current.scrollToIndex({
+          index: focusedChannelIdx,
+          animated: true,
+          viewPosition: 0.5,
+        });
+      } catch (e) {
+        // Fallback
+      }
+    }
+  }, [focusedChannelIdx, activeColumn, activeZone, isTivimateLayout]);
+
+  // Auto-scroll categories list when focusedCategoryIdx changes
+  useEffect(() => {
+    if (isTivimateLayout && activeZone === "content" && activeColumn === 0 && categoriesFlatListRef.current) {
+      try {
+        categoriesFlatListRef.current.scrollToIndex({
+          index: focusedCategoryIdx,
+          animated: true,
+          viewPosition: 0.5,
+        });
+      } catch (e) {
+        // Fallback
+      }
+    }
+  }, [focusedCategoryIdx, activeColumn, activeZone, isTivimateLayout]);
+
+  const handleUp = () => {
+    if (activeColumn === 0) {
+      if (focusedCategoryIdx > 0) {
+        setFocusedCategoryIdx(prev => prev - 1);
+      }
+    } else {
+      if (focusedChannelIdx > 0) {
+        const nextIdx = focusedChannelIdx - 1;
+        setFocusedChannelIdx(nextIdx);
+        if (filteredChannels[nextIdx]) {
+          handleChannelFocus(filteredChannels[nextIdx]);
+        }
+      }
+    }
+  };
+
+  const handleDown = () => {
+    if (activeColumn === 0) {
+      if (focusedCategoryIdx < allCategoriesList.length - 1) {
+        setFocusedCategoryIdx(prev => prev + 1);
+      }
+    } else {
+      if (focusedChannelIdx < filteredChannels.length - 1) {
+        const nextIdx = focusedChannelIdx + 1;
+        setFocusedChannelIdx(nextIdx);
+        if (filteredChannels[nextIdx]) {
+          handleChannelFocus(filteredChannels[nextIdx]);
+        }
+      }
+    }
+  };
+
+  const handleLeft = () => {
+    if (activeColumn === 1) {
+      setActiveColumn(0);
+    } else if (activeColumn === 0) {
+      setActiveZone("sidebar");
+      setSidebarIndex(1); // Channels tab index
+    }
+  };
+
+  const handleRight = () => {
+    if (activeColumn === 0 && filteredChannels.length > 0) {
+      setActiveColumn(1);
+    }
+  };
+
+  const handleSelect = () => {
+    if (activeColumn === 0) {
+      const cat = allCategoriesList[focusedCategoryIdx];
+      setSelectedCategory(cat);
+      const newChannels = cat ? allChannels.filter(c => c.category === cat) : allChannels;
+      if (newChannels.length > 0) {
+        setFocusedChannel(newChannels[0]);
+        setFocusedChannelIdx(0);
+      }
+    } else {
+      const channel = filteredChannels[focusedChannelIdx];
+      if (channel) {
+        handleChannelPress(channel.id);
+      }
+    }
+  };
+
   // Enable remote keys in the Channels screen to navigate categories and channels
   useTVRemoteControl({
+    onUp: handleUp,
+    onDown: handleDown,
+    onLeft: handleLeft,
+    onRight: handleRight,
+    onSelect: handleSelect,
     onBack: () => {
       router.replace("/(tabs)");
     },
-    active: isTivimateLayout,
+    active: isTivimateLayout && isScreenFocused && activeZone === "content",
   });
 
   // Render a Category Item on the Left Bar
   const renderCategoryItem = ({ item, index }: { item: string | null; index: number }) => {
     const isSelected = selectedCategory === item;
+    const isSpatialFocused = isTivimateLayout && activeZone === "content" && activeColumn === 0 && focusedCategoryIdx === index;
     const label = item === null ? "All Channels" : item;
 
     return (
       <TVFocusable
+        ref={index === 0 ? firstCategoryRef : undefined}
+        isDefault={index === 0 && isScreenFocused}
+        isSpatialFocused={isSpatialFocused}
         style={[
           styles.categoryItem,
           isSelected && { backgroundColor: "rgba(6, 182, 212, 0.15)" },
@@ -92,10 +229,11 @@ export default function ChannelsScreen() {
         focusedStyle={{ borderColor: colors.info }}
         onPress={() => {
           setSelectedCategory(item);
-          // Focus the first channel in the new category
+          setFocusedCategoryIdx(index);
           const newChannels = item ? allChannels.filter(c => c.category === item) : allChannels;
           if (newChannels.length > 0) {
             setFocusedChannel(newChannels[0]);
+            setFocusedChannelIdx(0);
           }
         }}
       >
@@ -112,21 +250,26 @@ export default function ChannelsScreen() {
     );
   };
 
-  // Render a Channel Item in the Tivimate Vertical List (exactly 5 items visible in bottom half)
-  const renderTivimateChannelItem = ({ item }: { item: Channel }) => {
+  // Render a Channel Item in the Tivimate Vertical List
+  const renderTivimateChannelItem = ({ item, index }: { item: Channel; index: number }) => {
     const isFocused = focusedChannel?.id === item.id;
-    // Bottom list height is 350px. 5 items -> exactly 70px per item
+    const isSpatialFocused = isTivimateLayout && activeZone === "content" && activeColumn === 1 && focusedChannelIdx === index;
     const itemHeight = 70;
 
     return (
       <TVFocusable
+        isSpatialFocused={isSpatialFocused}
         style={[
           styles.tivimateChannelItem,
           { height: itemHeight },
           isFocused && { backgroundColor: "rgba(255, 255, 255, 0.05)" },
         ]}
         focusedStyle={{ borderColor: colors.info }}
-        onFocus={() => handleChannelFocus(item)}
+        onFocus={() => {
+          setActiveColumn(1);
+          setFocusedChannelIdx(index);
+          handleChannelFocus(item);
+        }}
         onPress={() => handleChannelPress(item.id)}
       >
         <View style={styles.channelRow}>
@@ -151,6 +294,53 @@ export default function ChannelsScreen() {
     );
   };
 
+  const previewWebVideoRef = useRef<HTMLVideoElement>(null);
+  const previewHlsRef = useRef<any>(null);
+
+  // Web preview playback
+  useEffect(() => {
+    if (Platform.OS !== "web" || !focusedChannel?.url) return;
+    const video = previewWebVideoRef.current;
+    if (!video) return;
+
+    video.muted = true;
+    const isM3U8 = focusedChannel.url.toLowerCase().includes(".m3u8") || focusedChannel.url.toLowerCase().includes("hls");
+
+    if (!isM3U8) {
+      video.src = focusedChannel.url;
+      video.play().catch(() => {});
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = focusedChannel.url;
+      video.play().catch(() => {});
+    } else {
+      try {
+        const HlsModule = require("hls.js");
+        const Hls = HlsModule.default || HlsModule;
+        if (Hls && Hls.isSupported()) {
+          if (previewHlsRef.current) {
+            previewHlsRef.current.destroy();
+          }
+          const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+          previewHlsRef.current = hls;
+          hls.loadSource(focusedChannel.url);
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            video.play().catch(() => {});
+          });
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+
+    return () => {
+      if (previewHlsRef.current) {
+        previewHlsRef.current.destroy();
+        previewHlsRef.current = null;
+      }
+    };
+  }, [focusedChannel?.url]);
+
   if (loading && !allChannels.length) {
     return (
       <SafeAreaView style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
@@ -172,11 +362,13 @@ export default function ChannelsScreen() {
               <Text style={[styles.sidebarTitle, { color: colors.info }]}>Categories</Text>
             </View>
             <FlatList
+              ref={categoriesFlatListRef}
               data={[null, ...categories]}
               keyExtractor={(item) => item || "all"}
               renderItem={renderCategoryItem}
               showsVerticalScrollIndicator={false}
               removeClippedSubviews={false}
+              onScrollToIndexFailed={() => {}}
             />
           </View>
 
@@ -188,14 +380,29 @@ export default function ChannelsScreen() {
               {focusedChannel ? (
                 <View style={styles.previewContainer}>
                   <View style={styles.previewVideoBox}>
-                    <Video
-                      ref={previewVideoRef}
-                      source={{ uri: focusedChannel.url }}
-                      style={styles.previewVideo}
-                      resizeMode={ResizeMode.CONTAIN}
-                      shouldPlay
-                      isMuted
-                    />
+                    {Platform.OS === "web" ? (
+                      <video
+                        ref={previewWebVideoRef}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          backgroundColor: "#000",
+                          objectFit: "contain",
+                        }}
+                        playsInline
+                        muted
+                        autoPlay
+                      />
+                    ) : (
+                      <Video
+                        ref={previewVideoRef}
+                        source={{ uri: focusedChannel.url }}
+                        style={styles.previewVideo}
+                        resizeMode={ResizeMode.CONTAIN}
+                        shouldPlay
+                        isMuted
+                      />
+                    )}
                   </View>
                   <View style={styles.previewDetails}>
                     <View style={styles.detailsHeader}>
@@ -230,11 +437,13 @@ export default function ChannelsScreen() {
             {/* Bottom Half: Channels List (Exactly 5 items visible in 350px container) */}
             <View style={[styles.listBottomHalf, { borderTopColor: colors.border }]}>
               <FlatList
+                ref={channelsFlatListRef}
                 data={filteredChannels}
                 keyExtractor={(item) => item.id}
                 renderItem={renderTivimateChannelItem}
                 showsVerticalScrollIndicator={true}
                 removeClippedSubviews={false}
+                onScrollToIndexFailed={() => {}}
                 getItemLayout={(data, index) => ({
                   length: 70,
                   offset: 70 * index,
@@ -325,6 +534,7 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRightWidth: 1,
     paddingVertical: 12,
+    paddingLeft: 70,
   },
   sidebarHeader: {
     paddingHorizontal: 16,

@@ -1,4 +1,4 @@
-package icu.jehadurre.doggytv
+package icu.jehadurre.doggytvapp
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
