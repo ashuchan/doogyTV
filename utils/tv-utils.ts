@@ -69,13 +69,19 @@ export function getTVFocusProperties(isDefault: boolean = false) {
   return {};
 }
 
+// Zero-blur single-pass focus stroke definition
+export const tvFocusStroke = {
+  borderWidth: 2.5,
+  borderColor: "#FFB338",
+};
+
 // TV-specific styles
 export const tvStyles = {
   // Larger focus ring for TV navigation
   focusRing: {
-    borderWidth: 3,
-    borderColor: "#06B6D4", // Match Neon Cyan
-    borderRadius: 8,
+    borderWidth: 2.5,
+    borderColor: "#FFB338", // Puppy Honey Gold (10.1:1 AAA)
+    borderRadius: 12,
   },
   
   // Larger text for TV viewing distance
@@ -100,7 +106,7 @@ export const tvStyles = {
   card: {
     padding: 12,
     margin: 8,
-    borderRadius: 8,
+    borderRadius: 16,
   },
 };
 

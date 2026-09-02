@@ -142,7 +142,7 @@ describe("TVFocusable component", () => {
     
     // Flat style check
     const appliedStyles = [container.props.style].flat(Infinity);
-    const hasFocusStyle = appliedStyles.some((s: any) => s && s.borderColor === "#FFFFFF");
+    const hasFocusStyle = appliedStyles.some((s: any) => s && s.borderColor === "#FFB338");
     expect(hasFocusStyle).toBe(true);
   });
 
@@ -193,8 +193,8 @@ describe("TVFocusable component", () => {
     let styles1 = [container1.props.style].flat(Infinity);
     let styles2 = [container2.props.style].flat(Infinity);
 
-    expect(styles1.some((s: any) => s && s.borderColor === "#FFFFFF")).toBe(true);
-    expect(styles2.some((s: any) => s && s.borderColor === "#FFFFFF")).toBe(false);
+    expect(styles1.some((s: any) => s && s.borderColor === "#FFB338")).toBe(true);
+    expect(styles2.some((s: any) => s && s.borderColor === "#FFB338")).toBe(false);
 
     // 2. Move focus to Item 2 (blur item 1, focus item 2)
     act(() => {
@@ -209,7 +209,7 @@ describe("TVFocusable component", () => {
     styles2 = [container2.props.style].flat(Infinity);
 
     // Item 1 MUST lose its highlight, Item 2 MUST gain it
-    expect(styles1.some((s: any) => s && s.borderColor === "#FFFFFF")).toBe(false);
-    expect(styles2.some((s: any) => s && s.borderColor === "#FFFFFF")).toBe(true);
+    expect(styles1.some((s: any) => s && s.borderColor === "#FFB338")).toBe(false);
+    expect(styles2.some((s: any) => s && s.borderColor === "#FFB338")).toBe(true);
   });
 });

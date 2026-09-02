@@ -22,7 +22,7 @@ import { ResponsiveLayout } from "@/components/ResponsiveLayout";
 export default function SettingsScreen() {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
-  const { playlists, removePlaylist, fetchPlaylists, loading } = usePlaylistStore();
+  const { playlists, removePlaylist, fetchPlaylists, resetToDefaultPlaylist, loading } = usePlaylistStore();
   const isDarkMode = theme === "dark";
   const isTV = isTVDevice();
   const isLarge = isLargeScreen();
@@ -245,18 +245,42 @@ export default function SettingsScreen() {
                 styles.emptyPlaylists, 
                 { 
                   backgroundColor: colors.card,
-                  padding: (isTV || isLarge) ? getSpacing(24) : 16
+                  padding: (isTV || isLarge) ? getSpacing(24) : 16,
+                  alignItems: "center",
                 }
               ]}>
                 <Text style={[
                   styles.emptyPlaylistsText, 
                   { 
                     color: colors.textSecondary,
-                    fontSize: (isTV || isLarge) ? getFontSize(18) : 14
+                    fontSize: (isTV || isLarge) ? getFontSize(18) : 14,
+                    textAlign: "center",
+                    marginBottom: 16,
                   }
                 ]}>
-                  No playlists added yet. Add your first M3U playlist.
+                  No playlists added yet. Add an M3U playlist or restore the default demo channels.
                 </Text>
+                {isTV ? (
+                  <TVFocusable
+                    style={[styles.addButton, { backgroundColor: colors.primary, paddingHorizontal: 20 }]}
+                    onPress={resetToDefaultPlaylist}
+                  >
+                    <RefreshCw size={16} color={colors.textInverted || "#12131C"} />
+                    <Text style={[styles.addButtonText, { color: colors.textInverted || "#12131C", marginLeft: 8 }]}>
+                      Restore Demo Playlist
+                    </Text>
+                  </TVFocusable>
+                ) : (
+                  <Pressable
+                    style={[styles.addButton, { backgroundColor: colors.primary, paddingHorizontal: 20 }]}
+                    onPress={resetToDefaultPlaylist}
+                  >
+                    <RefreshCw size={16} color={colors.textInverted || "#12131C"} />
+                    <Text style={[styles.addButtonText, { color: colors.textInverted || "#12131C", marginLeft: 8 }]}>
+                      Restore Demo Playlist
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             ) : (
               playlists.map((playlist, index) => {

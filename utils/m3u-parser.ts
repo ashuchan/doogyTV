@@ -1,9 +1,19 @@
 import { Channel } from "@/types/channel";
 import { Playlist } from "@/types/playlist";
 
-export async function fetchM3uPlaylist(url: string, name?: string): Promise<Playlist> {
+export async function fetchM3uPlaylist(url: string, name?: string, id?: string): Promise<Playlist> {
   try {
-    const response = await fetch(url);
+    let response: Response;
+    try {
+      response = await fetch(url);
+    } catch (netErr) {
+      if (typeof window !== "undefined" && !url.includes("corsproxy.io")) {
+        console.log("Direct M3U fetch blocked by CORS on web, using proxy fallback...");
+        response = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(url)}`);
+      } else {
+        throw netErr;
+      }
+    }
     
     if (!response.ok) {
       throw new Error(`Failed to fetch playlist: ${response.status} ${response.statusText}`);
@@ -13,7 +23,7 @@ export async function fetchM3uPlaylist(url: string, name?: string): Promise<Play
     const channels = parseM3u(content);
     
     return {
-      id: generateId(),
+      id: id || generateId(),
       name: name || extractPlaylistName(url) || "My Playlist",
       url,
       channels,

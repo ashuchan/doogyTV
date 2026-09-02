@@ -59,6 +59,22 @@ export default function RootLayout() {
     setupBackgroundFetch();
     if (Platform.OS !== "web") {
       SplashScreen.hideAsync().catch(() => {});
+    } else if (typeof document !== "undefined") {
+      const styleId = "doggytv-remove-browser-outline";
+      if (!document.getElementById(styleId)) {
+        const style = document.createElement("style");
+        style.id = styleId;
+        style.textContent = `
+          *, *:focus, *:focus-visible, [tabindex]:focus, [tabindex]:focus-visible, button:focus, div:focus {
+            outline: none !important;
+            outline-style: none !important;
+            outline-width: 0 !important;
+            box-shadow: none !important;
+            -webkit-tap-highlight-color: transparent !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
     }
   }, []);
 
