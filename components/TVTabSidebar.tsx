@@ -17,15 +17,23 @@ export function TVTabSidebar({ state, descriptors, navigation }: TVTabSidebarPro
   const { activeZone, sidebarIndex, setSidebarIndex, setActiveZone } = useTVNavigationStore();
   const [localExpanded, setLocalExpanded] = useState(false);
   const widthAnim = useRef(new Animated.Value(70)).current;
+  const scrimAnim = useRef(new Animated.Value(0)).current;
 
   const isExpanded = localExpanded || activeZone === "sidebar";
 
   useEffect(() => {
-    Animated.timing(widthAnim, {
-      toValue: isExpanded ? 220 : 70,
-      duration: 180,
-      useNativeDriver: false,
-    }).start();
+    Animated.parallel([
+      Animated.timing(widthAnim, {
+        toValue: isExpanded ? 220 : 70,
+        duration: 180,
+        useNativeDriver: false,
+      }),
+      Animated.timing(scrimAnim, {
+        toValue: isExpanded ? 1 : 0,
+        duration: 180,
+        useNativeDriver: false,
+      }),
+    ]).start();
   }, [isExpanded]);
 
   const handleSidebarFocus = (index: number) => {
@@ -77,86 +85,114 @@ export function TVTabSidebar({ state, descriptors, navigation }: TVTabSidebarPro
   };
 
   return (
-    <Animated.View 
-      style={[
-        styles.sidebar, 
-        { 
-          width: widthAnim, 
-          backgroundColor: colors.background, 
-          borderRightColor: colors.border 
-        }
-      ]}
-    >
-      <View style={styles.logoContainer}>
-        <Text style={[styles.logoText, { color: colors.info }]}>
-          {isExpanded ? "doggyTV" : "dTV"}
-        </Text>
-      </View>
+    <>
+      {/* Dimming Backdrop Scrim */}
+      <Animated.View
+        pointerEvents={isExpanded ? "auto" : "none"}
+        style={[
+          styles.scrim,
+          {
+            opacity: scrimAnim,
+            backgroundColor: "rgba(18, 19, 28, 0.65)",
+          },
+        ]}
+      />
 
-      <View style={styles.navItemsContainer}>
-        {state.routes.map((route: any, index: number) => {
-          const { options } = descriptors[route.key];
-          const label = options.title !== undefined ? options.title : route.name;
-          const isTabActive = state.index === index;
-          const isItemSpatialFocused = isExpanded && sidebarIndex === index;
-          
-          const Icon = icons[route.name as keyof typeof icons] || Tv2;
+      <Animated.View 
+        style={[
+          styles.sidebar, 
+          { 
+            width: widthAnim, 
+            backgroundColor: colors.surface || "#1E1F2E", 
+            borderRightColor: colors.border 
+          }
+        ]}
+      >
+        <View style={styles.logoContainer}>
+          <Text style={[styles.logoText, { color: colors.primary }]}>
+            {isExpanded ? "doggyTV" : "dTV"}
+          </Text>
+        </View>
 
-          const onPress = () => {
-            setSidebarIndex(index);
-            const event = navigation.emit({
-              type: "tabPress",
-              target: route.key,
-              canPreventDefault: true,
-            });
+        <View style={styles.navItemsContainer}>
+          {state.routes.map((route: any, index: number) => {
+            const { options } = descriptors[route.key];
+            const label = options.title !== undefined ? options.title : route.name;
+            const isTabActive = state.index === index;
+            const isItemSpatialFocused = isExpanded && sidebarIndex === index;
+            
+            const Icon = icons[route.name as keyof typeof icons] || Tv2;
 
-            if (!isTabActive && !event.defaultPrevented) {
-              navigation.navigate({ name: route.name, merge: true });
-            }
-            setLocalExpanded(false);
-            setActiveZone("content");
-          };
+            const onPress = () => {
+              setSidebarIndex(index);
+              const event = navigation.emit({
+                type: "tabPress",
+                target: route.key,
+                canPreventDefault: true,
+              });
 
-          return (
-            <TVFocusable
-              key={route.key}
-              testID={`sidebar-nav-${route.name}`}
-              onPress={onPress}
-              onFocus={() => handleSidebarFocus(index)}
-              onBlur={handleSidebarBlur}
-              isSpatialFocused={isItemSpatialFocused}
-              style={[
-                styles.navItem,
-                isTabActive && { backgroundColor: "rgba(255, 255, 255, 0.06)" }
-              ]}
-              focusedStyle={{ borderColor: colors.info }}
-            >
-              <View style={styles.navItemContent}>
-                <Icon 
-                  size={24} 
-                  color={isTabActive || isItemSpatialFocused ? colors.info : colors.text} 
-                />
-                {isExpanded && (
-                  <Text 
-                    style={[
-                      styles.navLabel, 
-                      { color: isTabActive || isItemSpatialFocused ? colors.info : colors.text }
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {label}
-                  </Text>
-                )}
-              </View>
-            </TVFocusable>
-          );
-        })}
-      </View>
-    </Animated.View>
+              if (!isTabActive && !event.defaultPrevented) {
+                navigation.navigate({ name: route.name, merge: true });
+              }
+              setLocalExpanded(false);
+              setActiveZone("content");
+            };
+
+            const itemHighlightColor = isItemSpatialFocused 
+              ? colors.primary 
+              : isTabActive 
+                ? colors.primary 
+                : colors.text;
+
+            return (
+              <TVFocusable
+                key={route.key}
+                testID={`sidebar-nav-${route.name}`}
+                onPress={onPress}
+                onFocus={() => handleSidebarFocus(index)}
+                onBlur={handleSidebarBlur}
+                isSpatialFocused={isItemSpatialFocused}
+                style={[
+                  styles.navItem,
+                  isTabActive && { backgroundColor: "rgba(255, 179, 56, 0.12)" }
+                ]}
+                focusedStyle={{ borderColor: colors.primary }}
+              >
+                <View style={styles.navItemContent}>
+                  <Icon 
+                    size={24} 
+                    color={itemHighlightColor} 
+                  />
+                  {isExpanded && (
+                    <Text 
+                      style={[
+                        styles.navLabel, 
+                        { color: itemHighlightColor }
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {label}
+                    </Text>
+                  )}
+                </View>
+              </TVFocusable>
+            );
+          })}
+        </View>
+      </Animated.View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  scrim: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 90,
+  },
   sidebar: {
     position: "absolute",
     left: 0,
@@ -176,9 +212,9 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   logoText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   navItemsContainer: {
     flex: 1,
@@ -188,7 +224,7 @@ const styles = StyleSheet.create({
   },
   navItem: {
     width: "100%",
-    borderRadius: 8,
+    borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 10,
   },
@@ -199,7 +235,7 @@ const styles = StyleSheet.create({
   },
   navLabel: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "600",
     marginLeft: 15,
   },
 });

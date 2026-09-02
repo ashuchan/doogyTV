@@ -26,6 +26,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { isTVDevice, isLargeScreen, isGoogleTV } from "@/utils/tv-utils";
 import { TVFocusable } from "@/components/TVFocusable";
 import { useTVRemoteControl } from "@/hooks/useTVRemoteControl";
+import { CuteLoadingIndicator } from "@/components/CuteLoadingIndicator";
 
 export default function PlayerScreen() {
   const router = useRouter();
@@ -386,8 +387,8 @@ export default function PlayerScreen() {
       clearTimeout(controlsTimeout.current);
     }
     
-    // On TV, keep controls visible longer
-    const delay = isTV ? 5000 : 3000;
+    // On TV, auto-dismiss after 4.5s of inactivity
+    const delay = isTV ? 4500 : 3000;
     
     controlsTimeout.current = setTimeout(() => {
       setControlsVisible(false);
@@ -630,27 +631,28 @@ export default function PlayerScreen() {
         
         {loading && (
           <View style={styles.loadingOverlay}>
-            <ActivityIndicator size={isTV ? "large" : "large"} color={colors.white} />
-            <Text style={[
-              styles.loadingText, 
-              { fontSize: isTV ? 20 : 16 }
-            ]}>
-              Loading stream...
-            </Text>
+            <CuteLoadingIndicator message="Tuning in to stream..." />
           </View>
         )}
         
         {error && (
           <View style={styles.errorOverlay}>
+            <Text style={{ fontSize: 36, marginBottom: 12 }}>😿</Text>
+            <Text style={[
+              styles.errorTitle, 
+              { fontSize: isTV ? 22 : 18 }
+            ]}>
+              Cat got the signal?
+            </Text>
             <Text style={[
               styles.errorText, 
-              { fontSize: isTV ? 20 : 16 }
+              { fontSize: isTV ? 16 : 14 }
             ]}>
-              {error}
+              {error || "Channel temporarily unavailable."}
             </Text>
             {isTV ? (
               <TVFocusable
-                style={[styles.retryButton, { backgroundColor: colors.primary, padding: 16 }]}
+                style={[styles.retryButton, { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 14 }]}
                 onPress={() => {
                   setLoading(true);
                   setError(null);
@@ -665,7 +667,7 @@ export default function PlayerScreen() {
                 }}
                 isDefault={true}
               >
-                <Text style={[styles.retryButtonText, { fontSize: 18 }]}>Retry</Text>
+                <Text style={[styles.retryButtonText, { color: colors.textInverted || "#12131C", fontSize: 16 }]}>Retry</Text>
               </TVFocusable>
             ) : (
               <Pressable
@@ -683,7 +685,7 @@ export default function PlayerScreen() {
                   }
                 }}
               >
-                <Text style={styles.retryButtonText}>Retry</Text>
+                <Text style={[styles.retryButtonText, { color: colors.textInverted || "#12131C" }]}>Retry</Text>
               </Pressable>
             )}
           </View>
@@ -692,7 +694,7 @@ export default function PlayerScreen() {
         {controlsVisible && !guideVisible && (
           <View style={styles.controlsContainer}>
             <LinearGradient
-              colors={["rgba(0,0,0,0.7)", "transparent"]}
+              colors={["rgba(18, 19, 28, 0.75)", "transparent"]}
               style={styles.topGradient}
             >
               <SafeAreaView edges={["top"]} style={styles.topControls}>
@@ -725,7 +727,7 @@ export default function PlayerScreen() {
                     <Heart
                       size={28}
                       color={colors.white}
-                      fill={isFavorite ? colors.white : "none"}
+                      fill={isFavorite ? colors.accent || "#FF7582" : "none"}
                     />
                   </TVFocusable>
                 ) : (
@@ -733,7 +735,7 @@ export default function PlayerScreen() {
                     <Heart
                       size={isLarge ? 28 : 24}
                       color={colors.white}
-                      fill={isFavorite ? colors.white : "none"}
+                      fill={isFavorite ? colors.accent || "#FF7582" : "none"}
                     />
                   </Pressable>
                 )}
@@ -741,7 +743,7 @@ export default function PlayerScreen() {
             </LinearGradient>
             
             <LinearGradient
-              colors={["transparent", "rgba(0,0,0,0.85)"]}
+              colors={["transparent", "rgba(18, 19, 28, 0.94)"]}
               style={styles.bottomGradient}
             >
               <SafeAreaView edges={["bottom"]} style={styles.bottomControls}>
@@ -983,21 +985,28 @@ const styles = StyleSheet.create({
   spacer: {
     flex: 1,
   },
+  errorTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 8,
+    textAlign: "center",
+  },
   hudContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(30, 41, 59, 0.7)",
-    borderRadius: 12,
+    backgroundColor: "rgba(30, 31, 46, 0.85)",
+    borderRadius: 14,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.05)",
+    borderColor: "rgba(255, 248, 240, 0.08)",
   },
   hudLogo: {
     width: 60,
     height: 45,
     marginRight: 16,
-    borderRadius: 6,
+    borderRadius: 8,
     backgroundColor: "rgba(0,0,0,0.1)",
   },
   hudTextContainer: {
@@ -1009,24 +1018,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   hudTitle: {
-    color: "#fff",
+    color: "#FFF8F0",
     fontSize: 18,
     fontWeight: "bold",
   },
   resolutionBadge: {
-    backgroundColor: "#06B6D4",
+    backgroundColor: "#FFB338",
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 6,
     marginLeft: 10,
   },
   resolutionText: {
-    color: "#090D16",
+    color: "#12131C",
     fontSize: 10,
     fontWeight: "bold",
   },
   epgText: {
-    color: "#9CA3AF",
+    color: "#A59E98",
     fontSize: 12,
     marginBottom: 8,
   },
@@ -1038,7 +1047,7 @@ const styles = StyleSheet.create({
   },
   epgProgressBarFill: {
     height: "100%",
-    backgroundColor: "#06B6D4",
+    backgroundColor: "#FFB338",
   },
   guideContainer: {
     position: "absolute",
@@ -1046,9 +1055,9 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 320,
-    backgroundColor: "rgba(9, 13, 22, 0.95)",
+    backgroundColor: "rgba(18, 19, 28, 0.96)",
     borderRightWidth: 1,
-    borderRightColor: "rgba(255, 255, 255, 0.1)",
+    borderRightColor: "rgba(255, 248, 240, 0.08)",
     paddingVertical: 20,
     paddingHorizontal: 16,
     zIndex: 200,

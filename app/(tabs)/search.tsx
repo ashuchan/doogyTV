@@ -11,6 +11,7 @@ import { Footer } from "@/components/Footer";
 import { isTVDevice, isLargeScreen, getFontSize, getSpacing } from "@/utils/tv-utils";
 import { TVFocusable } from "@/components/TVFocusable";
 import { ResponsiveLayout } from "@/components/ResponsiveLayout";
+import { CuteEmptyState } from "@/components/CuteEmptyState";
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -139,19 +140,21 @@ export default function SearchScreen() {
             numColumns={isLarge ? 2 : 1}
             key={isLarge ? "grid" : "list"}
             ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Text style={[
-                  styles.emptyText, 
-                  { 
-                    color: colors.text,
-                    fontSize: (isTV || isLarge) ? getFontSize(18) : 16
-                  }
-                ]}>
-                  {searchQuery.length > 0
-                    ? "No channels found matching your search."
-                    : "Search for channels by name or category."}
-                </Text>
-              </View>
+              searchQuery.length > 0 ? (
+                <CuteEmptyState
+                  icon="🐶"
+                  title="Ruff day! No channels found."
+                  description="Try checking for typos or search for a broader channel name or category."
+                  actionLabel="Clear Search"
+                  onAction={clearSearch}
+                />
+              ) : (
+                <CuteEmptyState
+                  icon="🔍"
+                  title="Find your favorite channels"
+                  description="Search by channel name, genre, or country to start streaming."
+                />
+              )
             }
             ListFooterComponent={<Footer />}
           />

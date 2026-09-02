@@ -45,38 +45,19 @@ function FocusAnimatedContainer({
   testID,
   children,
 }: FocusAnimatedContainerProps) {
-  const scaleAnim = useRef(new Animated.Value(isFocused ? 1.04 : 1.0)).current;
-  const glowAnim = useRef(new Animated.Value(isFocused ? 1 : 0)).current;
+  const scaleAnim = useRef(new Animated.Value(isFocused ? 1.05 : 1.0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(scaleAnim, {
-        toValue: isFocused ? 1.04 : 1.0,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(glowAnim, {
-        toValue: isFocused ? 1 : 0,
-        duration: 150,
-        useNativeDriver: false,
-      }),
-    ]).start();
+    Animated.spring(scaleAnim, {
+      toValue: isFocused ? 1.05 : 1.0,
+      friction: 7,
+      tension: 100,
+      useNativeDriver: true,
+    }).start();
   }, [isFocused]);
 
   const animatedContainerStyle = {
     transform: [{ scale: scaleAnim }],
-    elevation: glowAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, 8],
-    }),
-    shadowOpacity: glowAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, 0.45],
-    }),
-    shadowRadius: glowAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [2, 10],
-    }),
   };
 
   return (
@@ -243,31 +224,28 @@ export const TVFocusable = React.forwardRef<any, TVFocusableProps>(({
 
 const styles = StyleSheet.create({
   pressableWrapper: {
-    // Pressable wrapper must be visible so that children aren't clipped during scale/glow
+    // Pressable wrapper must be visible so that children aren't clipped during scale
     overflow: "visible",
+    ...(Platform.OS === "web" ? { outlineStyle: "none", outlineWidth: 0 } : {}),
   },
   container: {
     borderWidth: 2.5,
     borderColor: "transparent",
-    borderRadius: 12,
+    borderRadius: 16,
     backgroundColor: "transparent",
-    overflow: "visible", 
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 4 },
+    overflow: "visible",
+    ...(Platform.OS === "web" ? { outlineStyle: "none", outlineWidth: 0 } : {}),
   },
   activeFocusedContainer: {
-    borderColor: "#FFFFFF",
+    borderColor: "#FFB338", // Puppy Honey Gold (10.1:1 AAA)
     borderWidth: 2.5,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 8,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 179, 56, 0.08)",
+    ...(Platform.OS === "web" ? { outlineStyle: "none", outlineWidth: 0 } : {}),
   },
   innerClippingContainer: {
     width: "100%",
-    borderRadius: 8,
+    borderRadius: 14,
     overflow: "hidden",
   },
 });

@@ -13,6 +13,8 @@ import { Footer } from "@/components/Footer";
 import { isTVDevice, isLargeScreen, getFontSize, getSpacing, getGridColumns, isGoogleTV } from "@/utils/tv-utils";
 import { TVFocusable } from "@/components/TVFocusable";
 import { ResponsiveLayout } from "@/components/ResponsiveLayout";
+import { CuteEmptyState } from "@/components/CuteEmptyState";
+import { CuteLoadingIndicator } from "@/components/CuteLoadingIndicator";
 import { useIsFocused } from "@react-navigation/native";
 import { useSpatialNavigation, SpatialGridRow } from "@/hooks/useSpatialNavigation";
 
@@ -119,6 +121,22 @@ export default function HomeScreen() {
     return () => subscription.remove();
   }, []);
 
+  // Auto-fetch default playlist on mount if empty or containing 0 channels
+  useEffect(() => {
+    if (safePlaylists.length === 0 || (safePlaylists.length > 0 && allChannels.length === 0)) {
+      try {
+        const res = fetchPlaylists();
+        if (res && typeof res.catch === "function") {
+          res.catch((err) => {
+            console.log("Initial playlist fetch error:", err);
+          });
+        }
+      } catch (e) {
+        console.log("Initial playlist sync error:", e);
+      }
+    }
+  }, []);
+
   const onRefresh = useCallback(async () => {
     await fetchPlaylists();
   }, [fetchPlaylists]);
@@ -171,30 +189,24 @@ export default function HomeScreen() {
 
           {loading && allChannels.length === 0 ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={[
-                styles.loadingText, 
-                { 
-                  color: colors.text,
-                  fontSize: isTV ? getFontSize(18) : 16
-                }
-              ]}>
-                Loading channels...
-              </Text>
+              <CuteLoadingIndicator message="Loading channels..." />
             </View>
           ) : error && allChannels.length === 0 ? (
-            <View style={styles.errorContainer}>
-              <Text style={[
-                styles.errorText, 
-                { 
-                  color: colors.error,
-                  fontSize: isTV ? getFontSize(18) : 16
-                }
-              ]}>
-                {error}
-              </Text>
-              {renderRetryButton()}
-            </View>
+            <CuteEmptyState
+              icon="😿"
+              title="Cat got the signal?"
+              description={error || "Failed to load playlist channels."}
+              actionLabel="Retry"
+              onAction={onRefresh}
+            />
+          ) : allChannels.length === 0 ? (
+            <CuteEmptyState
+              icon="🐶"
+              title="Paws and relax!"
+              description="Add an M3U playlist to start watching your favorite live channels."
+              actionLabel="Go to Settings"
+              onAction={() => router.push("/settings")}
+            />
           ) : (
             <>
               {hasContinueWatching && (

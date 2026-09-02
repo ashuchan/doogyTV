@@ -10,6 +10,7 @@ import { Heart } from "lucide-react-native";
 import { Footer } from "@/components/Footer";
 import { isTVDevice, isLargeScreen, getFontSize, getSpacing } from "@/utils/tv-utils";
 import { ResponsiveLayout } from "@/components/ResponsiveLayout";
+import { CuteEmptyState } from "@/components/CuteEmptyState";
 
 export default function FavoritesScreen() {
   const router = useRouter();
@@ -47,29 +48,13 @@ export default function FavoritesScreen() {
           numColumns={isLarge ? 2 : 1}
           key={isLarge ? "grid" : "list"}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Heart size={(isTV || isLarge) ? 64 : 48} color={colors.textSecondary} />
-              <Text style={[
-                styles.emptyTitle, 
-                { 
-                  color: colors.text,
-                  fontSize: (isTV || isLarge) ? getFontSize(24) : 20,
-                  marginTop: (isTV || isLarge) ? getSpacing(24) : 16
-                }
-              ]}>
-                No favorites yet
-              </Text>
-              <Text style={[
-                styles.emptyText, 
-                { 
-                  color: colors.textSecondary,
-                  fontSize: (isTV || isLarge) ? getFontSize(18) : 16,
-                  maxWidth: (isTV || isLarge) ? 500 : 300
-                }
-              ]}>
-                Add channels to your favorites by tapping the heart icon while watching.
-              </Text>
-            </View>
+            <CuteEmptyState
+              icon="💖"
+              title="No favorites saved yet!"
+              description="Tap the heart icon on any channel card or in the player to quickly access your favorite streams."
+              actionLabel="Browse Channels"
+              onAction={() => router.push("/channels")}
+            />
           }
           ListFooterComponent={<Footer />}
         />

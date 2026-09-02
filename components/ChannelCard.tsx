@@ -1,11 +1,12 @@
 import React, { useRef } from "react";
-import { StyleSheet, View, Text, Pressable, findNodeHandle, Dimensions } from "react-native";
+import { StyleSheet, View, Text, Pressable, Dimensions } from "react-native";
 import { Image } from "expo-image";
 import { useTheme } from "@/context/theme-context";
 import { Channel } from "@/types/channel";
 import { useFavoritesStore } from "@/store/favorites-store";
+import { useTVNavigationStore } from "@/store/tv-navigation-store";
 import { Heart } from "lucide-react-native";
-import { isTVDevice, isLargeScreen, getTVFocusProperties, getFontSize, getSpacing, isGoogleTV } from "@/utils/tv-utils";
+import { isTVDevice, isLargeScreen, getFontSize, getSpacing, isGoogleTV } from "@/utils/tv-utils";
 import { TVFocusable } from "@/components/TVFocusable";
 
 type ChannelCardProps = {
@@ -27,6 +28,7 @@ export const ChannelCard = React.forwardRef<any, ChannelCardProps>(({
 }: ChannelCardProps, ref) => {
   const { colors } = useTheme();
   const { favorites } = useFavoritesStore();
+  const { setLastFocusedCardKey } = useTVNavigationStore();
   const isFavorite = favorites.includes(channel.id);
   const isTV = isTVDevice() || isGoogleTV();
   const isLarge = isLargeScreen();
@@ -53,6 +55,12 @@ export const ChannelCard = React.forwardRef<any, ChannelCardProps>(({
     cardWidth = 240;
   }
 
+  const handleCardFocus = () => {
+    if (isTV) {
+      setLastFocusedCardKey(channel.id);
+    }
+  };
+
   // Use TVFocusable for TV devices, regular Pressable for mobile
   if (isTV) {
     return (
@@ -60,6 +68,7 @@ export const ChannelCard = React.forwardRef<any, ChannelCardProps>(({
         ref={ref}
         isDefault={isDefault}
         isSpatialFocused={isSpatialFocused}
+        onFocus={handleCardFocus}
         style={[
           styles.container, 
           { 
@@ -81,15 +90,16 @@ export const ChannelCard = React.forwardRef<any, ChannelCardProps>(({
               transition={200}
             />
           ) : (
-            <View style={[styles.placeholderLogo, { backgroundColor: colors.border }]}>
-              <Text style={[styles.placeholderText, { color: colors.text, fontSize: getFontSize(24) }]}>
-                {channel.name.substring(0, 2).toUpperCase()}
+            <View style={[styles.placeholderLogo, { backgroundColor: "rgba(255, 179, 56, 0.12)" }]}>
+              <Text style={[styles.placeholderIcon]}>🐾</Text>
+              <Text style={[styles.placeholderText, { color: colors.text, fontSize: getFontSize(16) }]}>
+                {channel.name.substring(0, 3).toUpperCase()}
               </Text>
             </View>
           )}
           {isFavorite && (
-            <View style={[styles.favoriteIcon, { backgroundColor: colors.primary }]}>
-              <Heart size={16} color={colors.white} fill={colors.white} />
+            <View style={[styles.favoriteIcon, { backgroundColor: colors.accent || "#FF7582" }]}>
+              <Heart size={14} color="#FFF8F0" fill="#FFF8F0" />
             </View>
           )}
         </View>
@@ -98,10 +108,10 @@ export const ChannelCard = React.forwardRef<any, ChannelCardProps>(({
             styles.name, 
             { 
               color: colors.text,
-              fontSize: getFontSize(14) // Adjusted card title text to 14px for content density
+              fontSize: getFontSize(14)
             }
           ]}
-          numberOfLines={1} // Single line to fit content cleanly
+          numberOfLines={1}
           ellipsizeMode="tail"
         >
           {channel.name}
@@ -144,21 +154,22 @@ export const ChannelCard = React.forwardRef<any, ChannelCardProps>(({
             transition={200}
           />
         ) : (
-          <View style={[styles.placeholderLogo, { backgroundColor: colors.border }]}>
+          <View style={[styles.placeholderLogo, { backgroundColor: "rgba(255, 179, 56, 0.12)" }]}>
+            <Text style={[styles.placeholderIcon]}>🐾</Text>
             <Text style={[
               styles.placeholderText, 
               { 
                 color: colors.text,
-                fontSize: isLarge ? 28 : 24
+                fontSize: isLarge ? 20 : 16
               }
             ]}>
-              {channel.name.substring(0, 2).toUpperCase()}
+              {channel.name.substring(0, 3).toUpperCase()}
             </Text>
           </View>
         )}
         {isFavorite && (
-          <View style={[styles.favoriteIcon, { backgroundColor: colors.primary }]}>
-            <Heart size={isLarge ? 14 : 12} color={colors.white} fill={colors.white} />
+          <View style={[styles.favoriteIcon, { backgroundColor: colors.accent || "#FF7582" }]}>
+            <Heart size={isLarge ? 14 : 12} color="#FFF8F0" fill="#FFF8F0" />
           </View>
         )}
       </View>
@@ -190,36 +201,44 @@ export const ChannelCard = React.forwardRef<any, ChannelCardProps>(({
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: "hidden",
   },
   imageContainer: {
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
+    borderRadius: 14,
+    overflow: "hidden",
   },
   logo: {
     width: "100%",
     height: "100%",
-    backgroundColor: "rgba(0,0,0,0.05)",
+    backgroundColor: "rgba(0,0,0,0.1)",
   },
   placeholderLogo: {
     width: "100%",
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
+  },
+  placeholderIcon: {
+    fontSize: 18,
   },
   placeholderText: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: "bold",
+    letterSpacing: 0.5,
   },
   favoriteIcon: {
     position: "absolute",
     top: 8,
     right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -228,11 +247,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 8,
     paddingHorizontal: 8,
-    height: 40,
+    height: 38,
   },
   category: {
     fontSize: 12,
-    marginTop: 4,
+    marginTop: 2,
     marginBottom: 8,
     paddingHorizontal: 8,
   },

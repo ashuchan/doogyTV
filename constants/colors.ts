@@ -1,36 +1,46 @@
 export const lightColors = {
-  primary: "#4361ee",
-  secondary: "#3f37c9",
-  background: "#f8f9fa",
-  card: "#ffffff",
-  text: "#212529",
-  textSecondary: "#6c757d",
-  border: "#e9ecef",
-  notification: "#ff4d6d",
-  error: "#dc3545",
-  success: "#28a745",
-  warning: "#ffc107",
-  info: "#17a2b8",
-  white: "#ffffff",
+  primary: "#FFB338",
+  focus: "#FFB338",
+  secondary: "#FF7582",
+  accent: "#FF7582",
+  background: "#FFF8F0",
+  surface: "#FFFFFF",
+  card: "#FFFFFF",
+  text: "#12131C",
+  textInverted: "#FFF8F0",
+  textSecondary: "#7A726B",
+  textMuted: "#7A726B",
+  border: "#EADFD5",
+  notification: "#FF7582",
+  error: "#DC3545",
+  success: "#28A745",
+  warning: "#FFB338",
+  info: "#FFB338",
+  white: "#FFFFFF",
   black: "#000000",
 };
 
 export const darkColors = {
-  primary: "#4F46E5", // Indigo accent
-  secondary: "#3f37c9",
-  background: "#090D16", // Charcoal black gradient start
-  backgroundEnd: "#111827", // Slate blue gradient end
-  card: "#1E293B", // Solid dark slate fallback for low-end SOCs
-  cardTranslucent: "rgba(255, 255, 255, 0.03)", // Translucent panel for high-end web/devices
-  border: "rgba(255, 255, 255, 0.05)", // Glassmorphism borders
-  text: "#F3F4F6", // High-contrast grey/white
-  textSecondary: "#9CA3AF", // Dimmed metadata text
-  notification: "#ff4d6d",
-  error: "#f44336",
-  success: "#4caf50",
-  warning: "#ff9800",
-  info: "#06B6D4", // Neon Cyan highlight
-  white: "#ffffff",
+  primary: "#FFB338", // Puppy Honey Gold (Focus borders, brand accents)
+  focus: "#FFB338", // Active D-Pad Remote Focus Ring / Highlight (10.1:1 AAA)
+  secondary: "#FF7582",
+  accent: "#FF7582", // Kitten Coral / Peach (Favorites, Live Badges)
+  background: "#12131C", // Deep Midnight Charcoal (Canvas Backdrop)
+  backgroundEnd: "#1A1B28",
+  surface: "#1E1F2E", // Warm Slate Panel (Cards, Drawers, Sidebar)
+  card: "#1E1F2E", // Solid dark slate panel for cards & surfaces
+  cardTranslucent: "rgba(255, 255, 255, 0.04)",
+  border: "rgba(255, 248, 240, 0.08)",
+  text: "#FFF8F0", // Warm Milk White (Primary TV typography 17.2:1 AAA)
+  textInverted: "#12131C", // Dark Charcoal (Mandatory text on Gold/Coral badges 10.1:1 AAA)
+  textSecondary: "#A59E98", // Warm Biscuit Gray (EPG subtitles, timeline meta 6.2:1 AA)
+  textMuted: "#A59E98",
+  notification: "#FF7582",
+  error: "#FF5C5C",
+  success: "#4CAF50",
+  warning: "#FFB338",
+  info: "#FFB338",
+  white: "#FFFFFF",
   black: "#000000",
 };
 

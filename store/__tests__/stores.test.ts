@@ -146,5 +146,14 @@ describe("Store Tests", () => {
       removePlaylist("p1");
       expect(usePlaylistStore.getState().playlists).toHaveLength(0);
     });
+
+    it("should reset to default demo playlist", () => {
+      const { resetToDefaultPlaylist } = usePlaylistStore.getState();
+      resetToDefaultPlaylist();
+      const playlists = usePlaylistStore.getState().playlists;
+      expect(playlists).toHaveLength(1);
+      expect(playlists[0].id).toBe("default-iptv-org");
+      expect(playlists[0].url).toBe("https://iptv-org.github.io/iptv/index.m3u");
+    });
   });
 });
