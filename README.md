@@ -6,11 +6,21 @@ A modern, cross-platform streaming application built with React Native and Expo.
 
 <div align="center">
 
-| ![Home](Screenshot_20250629-070450.png) | ![Categories](Screenshot_20250629-064420.png) | ![Channel List](Screenshot_20250629-064828.png) |
-|:---:|:---:|:---:|
-| ![Player](Screenshot_20250629-064907.png) | ![Favorites](Screenshot_20250629-064924.png) | ![Recently Watched](Screenshot_20250629-065117.png) |
-| ![TV Mode](Screenshot_20250629-065146.png) | ![TV Navigation](Screenshot_20250629-065209.png) | ![Settings](Screenshot_20250629-065236.png) |
-| ![Update](Screenshot_20250629-065249.png) | ![Web Preview](Screenshot_20250629-070647.png) |  |
+| **TV Home & Spatial Navigation** | **Left Navigation Menu** |
+|:---:|:---:|
+| <img src="assets/screenshots/home_screen.png" width="450" alt="Home Screen" /> | <img src="assets/screenshots/sidebar_screen.png" width="450" alt="Left Sidebar Menu" /> |
+
+| **Channels & Auto-Scroll EPG** | **Video Player Fullscreen** |
+|:---:|:---:|
+| <img src="assets/screenshots/channels_screen.png" width="450" alt="Channels Screen" /> | <img src="assets/screenshots/player_screen.png" width="450" alt="Video Player" /> |
+
+| **Player Channel Guide Overlay** | **Search & Discovery** |
+|:---:|:---:|
+| <img src="assets/screenshots/guide_screen.png" width="450" alt="Player Guide Overlay" /> | <img src="assets/screenshots/search_screen.png" width="450" alt="Search Screen" /> |
+
+| **Favorites Screen** | **Settings & Preferences** |
+|:---:|:---:|
+| <img src="assets/screenshots/favorites_screen.png" width="450" alt="Favorites Screen" /> | <img src="assets/screenshots/settings_screen.png" width="450" alt="Settings Screen" /> |
 
 </div>
 

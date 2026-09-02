@@ -13,9 +13,18 @@ type ChannelCardProps = {
   onPress: () => void;
   index?: number;
   rowIndex?: number;
+  isDefault?: boolean;
+  isSpatialFocused?: boolean;
 };
 
-export function ChannelCard({ channel, onPress, index = 0, rowIndex = 0 }: ChannelCardProps) {
+export const ChannelCard = React.forwardRef<any, ChannelCardProps>(({ 
+  channel, 
+  onPress, 
+  index = 0, 
+  rowIndex = 0, 
+  isDefault = false,
+  isSpatialFocused,
+}: ChannelCardProps, ref) => {
   const { colors } = useTheme();
   const { favorites } = useFavoritesStore();
   const isFavorite = favorites.includes(channel.id);
@@ -24,9 +33,6 @@ export function ChannelCard({ channel, onPress, index = 0, rowIndex = 0 }: Chann
   const { width, height } = Dimensions.get("window");
   const isLandscape = width > height;
   
-  // Refs for TV navigation
-  const cardRef = useRef(null);
-  
   // Calculate next focus targets for TV navigation
   const getNextFocusProps = () => {
     if (!isTV) return {};
@@ -34,7 +40,7 @@ export function ChannelCard({ channel, onPress, index = 0, rowIndex = 0 }: Chann
     return {
       nextFocusUp: rowIndex > 0 ? undefined : null,
       nextFocusDown: undefined,
-      nextFocusLeft: index > 0 ? undefined : null,
+      nextFocusLeft: undefined,
       nextFocusRight: undefined,
     };
   };
@@ -51,6 +57,9 @@ export function ChannelCard({ channel, onPress, index = 0, rowIndex = 0 }: Chann
   if (isTV) {
     return (
       <TVFocusable
+        ref={ref}
+        isDefault={isDefault}
+        isSpatialFocused={isSpatialFocused}
         style={[
           styles.container, 
           { 
@@ -113,7 +122,7 @@ export function ChannelCard({ channel, onPress, index = 0, rowIndex = 0 }: Chann
   // Mobile or browser version
   return (
     <Pressable
-      ref={cardRef}
+      ref={ref}
       style={[
         styles.container, 
         { 
@@ -177,7 +186,7 @@ export function ChannelCard({ channel, onPress, index = 0, rowIndex = 0 }: Chann
       </Text>
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

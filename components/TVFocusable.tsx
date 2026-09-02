@@ -1,27 +1,101 @@
-import React, { useState, useRef, useEffect, useImperativeHandle } from "react";
+import React, { useState, useRef, useImperativeHandle, useEffect } from "react";
 import { 
-  View, 
   Pressable, 
   StyleSheet, 
   ViewStyle, 
   StyleProp,
-  PressableProps,
-  findNodeHandle,
-  Animated
+  Animated,
+  Platform,
+  View,
+  findNodeHandle
 } from "react-native";
 import { isTVDevice, isGoogleTV } from "@/utils/tv-utils";
 
-interface TVFocusableProps extends PressableProps {
-  children: React.ReactNode;
+interface TVFocusableProps {
+  children: React.ReactNode | ((state: { focused: boolean }) => React.ReactNode);
   style?: StyleProp<ViewStyle>;
   focusedStyle?: StyleProp<ViewStyle>;
   isDefault?: boolean;
+  isSpatialFocused?: boolean;
+  disabled?: boolean;
   onFocus?: () => void;
   onBlur?: () => void;
+  onPress?: () => void;
   nextFocusDown?: number | null | undefined;
   nextFocusUp?: number | null | undefined;
   nextFocusLeft?: number | null | undefined;
   nextFocusRight?: number | null | undefined;
+  testID?: string;
+}
+
+interface FocusAnimatedContainerProps {
+  isFocused: boolean;
+  style?: any;
+  focusedStyle?: any;
+  disabled?: boolean;
+  testID?: string;
+  children: React.ReactNode;
+}
+
+function FocusAnimatedContainer({
+  isFocused,
+  style,
+  focusedStyle,
+  disabled,
+  testID,
+  children,
+}: FocusAnimatedContainerProps) {
+  const scaleAnim = useRef(new Animated.Value(isFocused ? 1.04 : 1.0)).current;
+  const glowAnim = useRef(new Animated.Value(isFocused ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(scaleAnim, {
+        toValue: isFocused ? 1.04 : 1.0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(glowAnim, {
+        toValue: isFocused ? 1 : 0,
+        duration: 150,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [isFocused]);
+
+  const animatedContainerStyle = {
+    transform: [{ scale: scaleAnim }],
+    elevation: glowAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 8],
+    }),
+    shadowOpacity: glowAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 0.45],
+    }),
+    shadowRadius: glowAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [2, 10],
+    }),
+  };
+
+  return (
+    <Animated.View
+      testID={testID ? `${testID}-container` : undefined}
+      style={[
+        styles.container,
+        style,
+        animatedContainerStyle,
+        isFocused && styles.activeFocusedContainer,
+        isFocused && focusedStyle,
+        disabled && { opacity: 0.5 },
+      ]}
+    >
+      <View style={styles.innerClippingContainer}>
+        {children}
+      </View>
+    </Animated.View>
+  );
 }
 
 export const TVFocusable = React.forwardRef<any, TVFocusableProps>(({
@@ -29,26 +103,29 @@ export const TVFocusable = React.forwardRef<any, TVFocusableProps>(({
   style,
   focusedStyle,
   isDefault = false,
+  isSpatialFocused,
+  disabled = false,
   onFocus,
   onBlur,
+  onPress,
   nextFocusDown,
   nextFocusUp,
   nextFocusLeft,
   nextFocusRight,
+  testID,
   ...props
 }: TVFocusableProps, ref) => {
   const [isFocused, setIsFocused] = useState(false);
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const pressableRef = useRef<any>(null);
-  const isTV = isTVDevice() || isGoogleTV();
-  
+  const localRef = useRef<any>(null);
+
   useImperativeHandle(ref, () => ({
     requestTVFocus: () => {
       try {
-        if (pressableRef.current?.requestTVFocus) {
-          pressableRef.current.requestTVFocus();
-        } else if (pressableRef.current?.focus) {
-          pressableRef.current.focus();
+        console.log("[DOGGYTV] requestTVFocus called. Has requestTVFocus:", !!localRef.current?.requestTVFocus, "Has focus:", !!localRef.current?.focus);
+        if (localRef.current?.requestTVFocus) {
+          localRef.current.requestTVFocus();
+        } else if (localRef.current?.focus) {
+          localRef.current.focus();
         }
       } catch (e) {
         console.log("Failed to request TV focus via imperative handle", e);
@@ -56,10 +133,11 @@ export const TVFocusable = React.forwardRef<any, TVFocusableProps>(({
     },
     focus: () => {
       try {
-        if (pressableRef.current?.focus) {
-          pressableRef.current.focus();
-        } else if (pressableRef.current?.requestTVFocus) {
-          pressableRef.current.requestTVFocus();
+        console.log("[DOGGYTV] focus called. Has requestTVFocus:", !!localRef.current?.requestTVFocus, "Has focus:", !!localRef.current?.focus);
+        if (localRef.current?.requestTVFocus) {
+          localRef.current.requestTVFocus();
+        } else if (localRef.current?.focus) {
+          localRef.current.focus();
         }
       } catch (e) {
         console.log("Failed to focus via imperative handle", e);
@@ -67,7 +145,7 @@ export const TVFocusable = React.forwardRef<any, TVFocusableProps>(({
     },
     getNativeTag: () => {
       try {
-        return findNodeHandle(pressableRef.current);
+        return findNodeHandle(localRef.current);
       } catch (e) {
         console.log("Failed to find node handle in getNativeTag", e);
         return null;
@@ -75,88 +153,121 @@ export const TVFocusable = React.forwardRef<any, TVFocusableProps>(({
     }
   }));
 
-  useEffect(() => {
-    if (isTV && isDefault) {
-      setTimeout(() => {
-        try {
-          if (pressableRef.current?.requestTVFocus) {
-            pressableRef.current.requestTVFocus();
-          } else if (pressableRef.current?.focus) {
-            pressableRef.current.focus();
-          }
-        } catch (e) {
-          console.log("Failed to request TV focus in useEffect", e);
-        }
-      }, 100);
-    }
-  }, [isDefault, isTV]);
-
   const handleFocus = () => {
     setIsFocused(true);
-    Animated.timing(scaleAnim, {
-      toValue: 1.04,
-      duration: 150,
-      useNativeDriver: true,
-    }).start();
     if (onFocus) onFocus();
   };
 
   const handleBlur = () => {
     setIsFocused(false);
-    Animated.timing(scaleAnim, {
-      toValue: 1.0,
-      duration: 150,
-      useNativeDriver: true,
-    }).start();
     if (onBlur) onBlur();
   };
 
-  // TV-specific props
-  const tvProps = isTV 
-    ? {
-        hasTVPreferredFocus: isDefault,
-        tvParallaxProperties: { enabled: false },
-        nextFocusDown,
-        nextFocusUp,
-        nextFocusLeft,
-        nextFocusRight,
-      } 
-    : {};
+  const isTV = isTVDevice() || isGoogleTV();
+
+  // Keep native DOM and TV focus strictly in sync with spatial focus state
+  useEffect(() => {
+    if (isSpatialFocused && localRef.current) {
+      if (Platform.OS === "web") {
+        try {
+          localRef.current.focus?.();
+        } catch (e) {}
+      } else if (isTV) {
+        try {
+          localRef.current.requestTVFocus?.();
+        } catch (e) {}
+      }
+    }
+  }, [isSpatialFocused, isTV]);
+
+  if (isTV) {
+    const tvPressableProps: any = {
+      ref: localRef,
+      focusable: !disabled,
+      accessible: true,
+      hasTVPreferredFocus: isDefault,
+      disabled,
+      onFocus: handleFocus,
+      onBlur: handleBlur,
+      onPress: disabled ? undefined : onPress,
+      testID,
+      nextFocusDown: nextFocusDown ?? undefined,
+      nextFocusUp: nextFocusUp ?? undefined,
+      nextFocusLeft: nextFocusLeft ?? undefined,
+      nextFocusRight: nextFocusRight ?? undefined,
+      style: styles.pressableWrapper,
+      ...props,
+    };
+
+    return (
+      <Pressable {...tvPressableProps}>
+        {({ focused }: { focused?: boolean }) => {
+          const activeFocus = isSpatialFocused !== undefined 
+            ? isSpatialFocused 
+            : (typeof focused === "boolean" ? focused : isFocused);
+          return (
+            <FocusAnimatedContainer
+              isFocused={activeFocus}
+              style={style}
+              focusedStyle={focusedStyle}
+              disabled={disabled}
+              testID={testID}
+            >
+              {typeof children === "function" ? children({ focused: activeFocus }) : children}
+            </FocusAnimatedContainer>
+          );
+        }}
+      </Pressable>
+    );
+  }
 
   return (
     <Pressable
-      ref={pressableRef}
-      {...props}
-      {...tvProps}
+      ref={localRef}
       style={[
         styles.container,
         style,
-        isFocused && styles.focused,
-        isFocused && focusedStyle,
+        disabled && { opacity: 0.5 },
       ]}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
+      onPress={disabled ? undefined : onPress}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      disabled={disabled}
+      testID={testID}
+      {...props}
     >
-      <Animated.View style={{ transform: [{ scale: scaleAnim }], width: "100%", height: "100%", justifyContent: "center" }}>
-        {children}
-      </Animated.View>
+      {typeof children === "function" ? children({ focused: false }) : children}
     </Pressable>
   );
 });
 
 const styles = StyleSheet.create({
-  container: {
-    borderWidth: 2,
-    borderColor: "transparent",
-    borderRadius: 6,
-    overflow: "hidden",
+  pressableWrapper: {
+    // Pressable wrapper must be visible so that children aren't clipped during scale/glow
+    overflow: "visible",
   },
-  focused: {
-    borderColor: "#06B6D4", // Neon Cyan default focus color
-    shadowColor: "#06B6D4",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
+  container: {
+    borderWidth: 2.5,
+    borderColor: "transparent",
+    borderRadius: 12,
+    backgroundColor: "transparent",
+    overflow: "visible", 
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+  },
+  activeFocusedContainer: {
+    borderColor: "#FFFFFF",
+    borderWidth: 2.5,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45,
     shadowRadius: 10,
-    elevation: 5,
+    elevation: 8,
+  },
+  innerClippingContainer: {
+    width: "100%",
+    borderRadius: 8,
+    overflow: "hidden",
   },
 });

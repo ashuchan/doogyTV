@@ -86,9 +86,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'icu.jehadurre.doggytv'
+    namespace 'icu.jehadurre.doggytvapp'
     defaultConfig {
-        applicationId 'icu.jehadurre.doggytv'
+        applicationId 'icu.jehadurre.doggytvapp'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -172,11 +172,5 @@ dependencies {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
-    }
-}
-
-tasks.whenTaskAdded { task ->
-    if (task.name.contains("checkReleaseAarMetadata") || task.name.contains("checkDebugAarMetadata")) {
-        task.enabled = false
     }
 }

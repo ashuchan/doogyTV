@@ -26,10 +26,10 @@ export async function fetchM3uPlaylist(url: string, name?: string): Promise<Play
 }
 
 function parseM3u(content: string): Channel[] {
-  const lines = content.split("\n");
+  const lines = content.split(/\r?\n/);
   const channels: Channel[] = [];
   
-  if (!lines[0].includes("#EXTM3U")) {
+  if (lines.length === 0 || !lines[0].includes("#EXTM3U")) {
     throw new Error("Invalid M3U format");
   }
   
@@ -37,26 +37,23 @@ function parseM3u(content: string): Channel[] {
   
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
+    if (!line) continue;
     
     if (line.startsWith("#EXTINF:")) {
-      // Parse channel info
       currentChannel = parseExtInf(line);
-    } else if (line && !line.startsWith("#") && currentChannel) {
-      // This is a URL line
-      currentChannel.url = line;
+    } else if (line.startsWith("#EXTGRP:") && currentChannel) {
+      currentChannel.category = line.substring(8).trim() || "Uncategorized";
+    } else if (!line.startsWith("#") && currentChannel) {
+      currentChannel.url = line.replace(/[\r\n]/g, "").trim();
       currentChannel.id = generateId();
-      
-      // Ensure category exists
       if (!currentChannel.category) {
-        currentChannel.category = "Uncategorized";
+        currentChannel.category = "General";
       }
-      
+      if (!currentChannel.name) {
+        currentChannel.name = "Live Stream " + (channels.length + 1);
+      }
       channels.push(currentChannel as Channel);
       currentChannel = null;
-    } else if (line.startsWith("#EXTGRP:") && currentChannel) {
-      // Parse group
-      const group = line.substring(8).trim();
-      currentChannel.category = group;
     }
   }
   
@@ -66,29 +63,28 @@ function parseM3u(content: string): Channel[] {
 function parseExtInf(line: string): Partial<Channel> {
   const channel: Partial<Channel> = {
     name: "",
-    category: "Uncategorized",
+    category: "General",
   };
   
-  // Extract channel name
-  const nameMatch = line.match(/,(.+)$/);
-  if (nameMatch && nameMatch[1]) {
-    channel.name = nameMatch[1].trim();
+  // Extract channel name (text after the last comma)
+  const commaIndex = line.lastIndexOf(",");
+  if (commaIndex !== -1) {
+    channel.name = line.substring(commaIndex + 1).trim();
   }
   
-  // Extract attributes
+  // Fast attribute extraction
   const attrRegex = /([a-zA-Z0-9-]+)="([^"]*)"/g;
   let match;
   
   while ((match = attrRegex.exec(line)) !== null) {
     const [, key, value] = match;
-    
     switch (key.toLowerCase()) {
       case "tvg-logo":
       case "logo":
         channel.logo = value;
         break;
       case "group-title":
-        channel.category = value || "Uncategorized";
+        channel.category = value.trim() || "General";
         break;
       case "tvg-id":
         channel.tvgId = value;

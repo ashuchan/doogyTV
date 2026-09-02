@@ -14,7 +14,7 @@ jest.mock("react-native", () => {
         onBlur={onBlur}
         style={style}
       >
-        {children}
+        {typeof children === "function" ? children({ focused: false }) : children}
       </reactNative.View>
     );
   });

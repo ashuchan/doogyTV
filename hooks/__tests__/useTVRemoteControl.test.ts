@@ -13,58 +13,20 @@ beforeAll(() => {
   } as any;
 });
 
-const mockEnable = jest.fn();
-const mockDisable = jest.fn();
-
-jest.mock("react-native", () => {
-  const actual = jest.requireActual("react-native");
-  // Safely define TVEventHandler on actual to preserve lazy-load getters
-  Object.defineProperty(actual, "TVEventHandler", {
-    value: class MockTVEventHandler {
-      enable = mockEnable;
-      disable = mockDisable;
-    },
-    writable: true,
-  });
-  return actual;
-});
-
 describe("useTVRemoteControl", () => {
-  const originalOS = Platform.OS;
+  const mockEnable = jest.fn();
+  const mockDisable = jest.fn();
+  const mockEventHandler = {
+    enable: mockEnable,
+    disable: mockDisable,
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  afterEach(() => {
-    Object.defineProperty(Platform, "OS", {
-      value: originalOS,
-      configurable: true,
-    });
-  });
-
   it("should setup keydown event listener on Web", () => {
-    Object.defineProperty(Platform, "OS", {
-      value: "web",
-      configurable: true,
-    });
-
-    const onUp = jest.fn();
-
-    const { unmount } = renderHook(() =>
-      useTVRemoteControl({ onUp, active: true })
-    );
-
-    expect(mockAddEventListener).toHaveBeenCalledWith("keydown", expect.any(Function));
-    unmount();
-    expect(mockRemoveEventListener).toHaveBeenCalledWith("keydown", expect.any(Function));
-  });
-
-  it("should handle keydown events on Web", () => {
-    Object.defineProperty(Platform, "OS", {
-      value: "web",
-      configurable: true,
-    });
+    jest.replaceProperty(Platform, "OS", "web");
 
     const onUp = jest.fn();
     const onDown = jest.fn();
@@ -73,7 +35,7 @@ describe("useTVRemoteControl", () => {
     const onSelect = jest.fn();
     const onBack = jest.fn();
 
-    renderHook(() =>
+    const { unmount } = renderHook(() =>
       useTVRemoteControl({
         onUp,
         onDown,
@@ -103,13 +65,27 @@ describe("useTVRemoteControl", () => {
       expect(callback).toHaveBeenCalled();
       expect(preventDefault).toHaveBeenCalled();
     });
+
+    unmount();
+    expect(mockRemoveEventListener).toHaveBeenCalledWith("keydown", expect.any(Function));
+  });
+
+  it("should not setup listeners when active is false", () => {
+    jest.replaceProperty(Platform, "OS", "web");
+
+    renderHook(() =>
+      useTVRemoteControl({
+        active: false,
+        eventHandler: mockEventHandler,
+      })
+    );
+
+    expect(mockAddEventListener).not.toHaveBeenCalled();
+    expect(mockEnable).not.toHaveBeenCalled();
   });
 
   it("should setup and trigger TVEventHandler on Native platforms", () => {
-    Object.defineProperty(Platform, "OS", {
-      value: "android",
-      configurable: true,
-    });
+    jest.replaceProperty(Platform, "OS", "android");
 
     const onUp = jest.fn();
     const onDown = jest.fn();
@@ -127,6 +103,7 @@ describe("useTVRemoteControl", () => {
         onSelect,
         onBack,
         active: true,
+        eventHandler: mockEventHandler,
       })
     );
 
